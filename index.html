@@ -1,0 +1,1411 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>加油站排班系統</title>
+<meta name="theme-color" content="#0f766e">
+<meta name="description" content="多站加油站排班工具：營業時間、班別、正職/計時人員、勞基法檢查、工時統計。">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="加油站排班">
+<style>
+:root{
+  --bg:#f3f5f7;--card:#fff;--text:#1d2730;--muted:#66727f;--line:#dbe1e7;--line2:#eef1f4;
+  --accent:#0f766e;--accent-ink:#fff;--accent-2:#e3f3f0;
+  --err:#c81e1e;--err-bg:#fde8e8;--warn:#a85a00;--warn-bg:#fff2dc;--info:#1d5fd1;--info-bg:#e7efff;
+  --hol:#c2410c;--hol-bg:#fff0e6;--off:#8a96a3;--off-bg:#eef1f4;
+  --shadow:0 1px 2px rgba(15,30,45,.06),0 2px 8px rgba(15,30,45,.05);
+  --font:"Noto Sans TC","Microsoft JhengHei","PingFang TC","Heiti TC",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#10151a;--card:#182027;--text:#e5ebf0;--muted:#93a0ad;--line:#2b3640;--line2:#1f2930;
+  --accent:#2bb3a3;--accent-ink:#05201d;--accent-2:#10332f;
+  --err:#f17575;--err-bg:#3a1b1b;--warn:#f0b640;--warn-bg:#382a10;--info:#6aa3ff;--info-bg:#152740;
+  --hol:#fb9a5c;--hol-bg:#3a2214;--off:#7f8b97;--off-bg:#222c35;
+  --shadow:0 1px 2px rgba(0,0,0,.3);
+}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:15px/1.5 var(--font);-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{margin:0;line-height:1.3}
+h2{font-size:17px;margin-bottom:10px}
+h3{font-size:15px}
+small,.muted{color:var(--muted)}
+.hint{color:var(--muted);font-size:13px;margin:6px 0 0}
+
+/* ---------- 版面 ---------- */
+.top{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:10px;padding:10px 16px;padding-top:max(10px,env(safe-area-inset-top));background:var(--accent);color:var(--accent-ink)}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;white-space:nowrap}
+.brand svg{width:24px;height:24px}
+.top select{flex:1;min-width:0;max-width:320px;margin-left:auto;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.35);color:inherit;border-radius:8px;padding:6px 8px}
+.top select option{color:#1d2730;background:#fff}
+#nav{display:flex;gap:4px;padding:0 16px;background:var(--card);border-bottom:1px solid var(--line)}
+#nav button{border:0;background:none;padding:11px 14px;color:var(--muted);border-bottom:3px solid transparent;cursor:pointer;display:flex;align-items:center;gap:6px}
+#nav button svg{width:18px;height:18px}
+#nav button.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+main{padding:14px 16px 40px;max-width:1500px;margin:0 auto}
+@media (max-width:720px){
+  #nav{position:fixed;bottom:0;left:0;right:0;z-index:30;padding:0 0 env(safe-area-inset-bottom);border-top:1px solid var(--line);border-bottom:0;justify-content:space-around}
+  #nav button{flex:1;flex-direction:column;gap:2px;font-size:12px;padding:7px 0 6px;border-bottom:0;border-top:3px solid transparent}
+  #nav button.on{border-top-color:var(--accent)}
+  main{padding:12px 12px 90px}
+  .brand span{display:none}
+}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px;box-shadow:var(--shadow)}
+.row{display:flex;align-items:center;flex-wrap:wrap}
+.gap{gap:8px}
+.grow{flex:1}
+
+/* ---------- 按鈕、表單 ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:7px 12px;cursor:pointer;white-space:nowrap;min-height:38px}
+.btn:hover{border-color:var(--accent)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.danger{color:var(--err);border-color:color-mix(in srgb,var(--err) 40%,var(--line))}
+.btn.sm{min-height:30px;padding:3px 9px;font-size:13px}
+.btn.icon{padding:6px 9px}
+.btn svg{width:18px;height:18px}
+.btn .cnt{background:var(--err);color:#fff;border-radius:10px;padding:0 6px;font-size:12px;line-height:18px}
+.btn .cnt.w{background:var(--warn)}
+input[type=text],input[type=date],input[type=time],input[type=number],select,textarea{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:6px 8px;min-height:36px;max-width:100%}
+input[type=number]{width:70px}
+input:focus,select:focus,textarea:focus{outline:2px solid color-mix(in srgb,var(--accent) 50%,transparent);outline-offset:0;border-color:var(--accent)}
+.fld{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.fld>span{font-size:13px;color:var(--muted)}
+.chk{display:inline-flex;align-items:center;gap:6px;cursor:pointer;margin-right:12px}
+.chk input{width:18px;height:18px;accent-color:var(--accent)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--card)}
+.seg button{border:0;background:none;padding:6px 12px;cursor:pointer;min-height:36px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.tag{display:inline-block;font-size:12px;border-radius:6px;padding:0 6px;line-height:20px;margin-left:6px;vertical-align:middle;font-weight:500}
+.tag.hol{background:var(--hol-bg);color:var(--hol)}
+.tag.cls{background:var(--off-bg);color:var(--muted)}
+.tag.err{background:var(--err-bg);color:var(--err)}
+.tag.ok{background:var(--accent-2);color:var(--accent)}
+.badge{display:inline-block;font-size:11px;border-radius:5px;padding:0 5px;line-height:17px;margin-left:5px;font-weight:600;vertical-align:1px}
+.badge.full{background:var(--accent-2);color:var(--accent)}
+.badge.part{background:var(--info-bg);color:var(--info)}
+
+/* ---------- 期間列 ---------- */
+.pbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.pbar .lbl{font-weight:700;font-size:16px;min-width:0}
+.pbar .tools{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+@media (max-width:720px){.pbar .tools{margin-left:0;width:100%}.pbar .tools .btn.pri{flex:1}}
+
+/* ---------- 表格班表 ---------- */
+.grid-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--card);max-height:calc(100vh - 230px);box-shadow:var(--shadow)}
+@media (max-width:720px){.grid-wrap{max-height:calc(100vh - 300px)}}
+table.grid{border-collapse:separate;border-spacing:0;font-size:13px}
+.grid th,.grid td{border-right:1px solid var(--line2);border-bottom:1px solid var(--line2);padding:0;text-align:center}
+.grid thead th{position:sticky;top:0;z-index:3;background:var(--card);padding:5px 2px;font-weight:600;min-width:46px;border-bottom:1px solid var(--line)}
+.grid thead th .wd{font-size:11px;color:var(--muted);font-weight:500}
+.grid thead th.we .wd{color:var(--accent)}
+.grid thead th.hol{background:var(--hol-bg);color:var(--hol)}
+.grid thead th.hol .wd{color:var(--hol)}
+.grid thead th.today{box-shadow:inset 0 -3px 0 var(--accent)}
+.grid thead th.cl{color:var(--muted);text-decoration:line-through}
+.grid .name{position:sticky;left:0;z-index:2;background:var(--card);text-align:left;padding:4px 8px;min-width:96px;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-right:1px solid var(--line);font-weight:500;cursor:pointer}
+.grid thead .name{z-index:4;cursor:default}
+.grid .sum{min-width:48px;padding:4px;font-variant-numeric:tabular-nums;color:var(--muted);background:var(--card)}
+.grid .sum.bad{color:var(--err);font-weight:700}
+.grid td.c{height:40px;min-width:46px;cursor:pointer;position:relative}
+.grid td.c:hover{outline:2px solid var(--accent);outline-offset:-2px}
+.grid td.c .sh{display:block;margin:3px;border-radius:6px;line-height:32px;font-weight:700;background:color-mix(in srgb,var(--sc) 22%,transparent);color:color-mix(in srgb,var(--sc) 70%,var(--text));border-left:3px solid var(--sc)}
+.grid td.c .of{color:var(--off);font-weight:600}
+.grid td.c .of.R{color:var(--accent)}
+.grid td.c .of.A,.grid td.c .of.L{color:var(--info)}
+.grid td.c .of.H{color:var(--hol)}
+.grid td.c.hol{background:color-mix(in srgb,var(--hol-bg) 55%,transparent)}
+.grid td.c.cl{background:repeating-linear-gradient(135deg,transparent 0 6px,var(--line2) 6px 8px)}
+.grid td.c.lk::after{content:"";position:absolute;right:0;top:0;border-style:solid;border-width:0 10px 10px 0;border-color:transparent var(--info) transparent transparent}
+.grid td.c.e-err{box-shadow:inset 0 0 0 2px var(--err)}
+.grid td.c.e-warn{box-shadow:inset 0 0 0 2px var(--warn)}
+.grid td.c.e-err::before,.grid td.c.e-warn::before{content:"";position:absolute;left:3px;top:3px;width:7px;height:7px;border-radius:50%;background:var(--err)}
+.grid td.c.e-warn::before{background:var(--warn)}
+.grid tfoot th,.grid tfoot td{background:var(--card);font-size:12px;padding:4px 2px;font-variant-numeric:tabular-nums}
+.grid tfoot tr:first-child>*{border-top:2px solid var(--line)}
+.grid tfoot .name{font-weight:600}
+.grid tfoot td.short{color:var(--err);font-weight:700;background:var(--err-bg)}
+.grid tfoot td.ok{color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin:10px 2px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px}
+
+/* ---------- 每日檢視 ---------- */
+.days{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.day{padding:12px}
+.day h3{display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.day.today{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.srow{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--line2)}
+.slabel{width:78px;flex:none;white-space:nowrap;font-weight:700;border-left:4px solid var(--sc);padding-left:6px;line-height:1.2}
+.slabel small{display:block;font-weight:400;font-size:11px}
+.chips{flex:1;display:flex;flex-wrap:wrap;gap:5px}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:16px;padding:2px 10px;cursor:pointer;font-size:14px;min-height:30px}
+.chip.e-err{border-color:var(--err);color:var(--err);background:var(--err-bg)}
+.chip.e-warn{border-color:var(--warn);color:var(--warn);background:var(--warn-bg)}
+.chip.add{border-style:dashed;color:var(--muted)}
+.chip .lkm{color:var(--info);margin-left:3px;font-size:11px}
+.cntb{flex:none;font-size:12px;font-variant-numeric:tabular-nums;color:var(--muted);padding-top:5px}
+.cntb.short{color:var(--err);font-weight:700}
+.offrow{font-size:13px;color:var(--muted);padding-top:7px;border-top:1px solid var(--line2);display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.offrow .chip{font-size:13px;min-height:26px;padding:1px 8px}
+
+/* ---------- 問題清單 ---------- */
+.issues{margin-top:14px}
+.issues summary{cursor:pointer;font-weight:600;list-style:none;display:flex;align-items:center;gap:8px}
+.issues summary::-webkit-details-marker{display:none}
+.iss{list-style:none;padding:0;margin:8px 0 0}
+.iss li{padding:7px 10px;border-radius:8px;margin-bottom:5px;font-size:14px;display:flex;gap:8px;align-items:flex-start}
+.iss li[data-act]{cursor:pointer}
+.iss li.err{background:var(--err-bg);color:var(--err)}
+.iss li.warn{background:var(--warn-bg);color:var(--warn)}
+.iss li.info{background:var(--info-bg);color:var(--info)}
+.iss li b{white-space:nowrap}
+.iss li span{color:var(--text)}
+
+/* ---------- 列表 ---------- */
+.list{display:flex;flex-direction:column;gap:8px}
+.emp{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+.emp .info{flex:1;min-width:0;cursor:pointer}
+.emp .info b{font-size:15px}
+.emp .info div{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.emp.inactive{opacity:.55}
+.tbl-wrap{overflow:auto}
+table.tbl{border-collapse:collapse;width:100%;font-size:14px}
+.tbl th,.tbl td{border-bottom:1px solid var(--line2);padding:7px 8px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tbl th:first-child,.tbl td:first-child{text-align:left}
+.tbl thead th{color:var(--muted);font-weight:600;font-size:13px;border-bottom:1px solid var(--line)}
+.tbl td.bad{color:var(--err);font-weight:700}
+.tbl td.wn{color:var(--warn);font-weight:700}
+.log{font-size:14px;padding:8px 0;border-bottom:1px solid var(--line2);display:flex;gap:10px;align-items:flex-start}
+.log .t{flex:1}
+.log small{display:block}
+
+/* ---------- 設定 ---------- */
+.shift-card{border:1px solid var(--line);border-left:5px solid var(--sc);border-radius:10px;padding:10px;margin-bottom:10px}
+.shift-card .row>label{display:flex;flex-direction:column;font-size:12px;color:var(--muted);gap:3px}
+.needs{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-top:8px}
+.needs label{display:flex;flex-direction:column;align-items:center;font-size:12px;color:var(--muted);gap:2px}
+.needs input{width:100%;text-align:center;padding:4px 2px}
+.sw{display:inline-flex;gap:5px;flex-wrap:wrap}
+.sw button{width:26px;height:26px;border-radius:50%;border:2px solid transparent;cursor:pointer;background:var(--c)}
+.sw button.on{border-color:var(--text);box-shadow:0 0 0 2px var(--card) inset}
+.hours td,.hours th{padding:4px 6px;text-align:left}
+.cov-ok{color:var(--accent)}
+.cov-bad{color:var(--err)}
+.hol-list{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
+.hol-list span{background:var(--hol-bg);color:var(--hol);border-radius:6px;padding:2px 4px 2px 8px;font-size:13px;display:inline-flex;align-items:center;gap:4px}
+.hol-list button{border:0;background:none;color:inherit;cursor:pointer;padding:0 4px;font-size:15px;line-height:1}
+.rules{margin:6px 0 0;padding-left:20px;font-size:14px}
+.rules li{margin-bottom:3px}
+
+/* ---------- 彈出視窗 ---------- */
+#ov{position:fixed;inset:0;background:rgba(10,20,30,.45);z-index:50;display:none;align-items:center;justify-content:center;padding:16px}
+#ov.show{display:flex}
+#sheet{background:var(--card);border-radius:14px;width:100%;max-width:520px;max-height:88vh;overflow:auto;padding:16px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+@media (max-width:720px){#ov{align-items:flex-end;padding:0}#sheet{max-width:none;border-radius:16px 16px 0 0;max-height:85vh;padding-bottom:max(16px,env(safe-area-inset-bottom))}}
+#sheet .hd{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+#sheet .hd h3{flex:1;font-size:17px}
+.x{border:0;background:var(--off-bg);border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:18px;line-height:1;flex:none}
+.sec{font-size:13px;color:var(--muted);margin:12px 0 6px;font-weight:600}
+.opts{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px}
+.opt{border:1px solid var(--line);border-left:4px solid var(--sc,var(--line));background:var(--card);border-radius:8px;padding:7px 9px;text-align:left;cursor:pointer;display:flex;flex-direction:column;min-height:48px}
+.opt small{font-size:12px}
+.opt em{font-style:normal;font-size:11px;color:var(--warn);line-height:1.3;margin-top:2px}
+.opt.on{background:var(--accent-2);border-color:var(--accent);border-left-color:var(--sc,var(--accent))}
+.li{display:flex;width:100%;justify-content:space-between;align-items:center;gap:8px;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:9px 12px;margin-bottom:6px;cursor:pointer;text-align:left}
+.li em{font-style:normal;font-size:12px;color:var(--warn);display:block}
+.li .r{color:var(--muted);font-size:13px;white-space:nowrap}
+.foot{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.days7{display:flex;gap:4px;flex-wrap:wrap}
+.days7 label{display:flex;align-items:center;gap:3px;border:1px solid var(--line);border-radius:7px;padding:3px 7px;cursor:pointer}
+.days7 input{accent-color:var(--accent)}
+#toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,120px);background:#1d2730;color:#fff;padding:10px 16px;border-radius:10px;z-index:60;transition:transform .25s;max-width:calc(100% - 32px);display:flex;gap:12px;align-items:center;box-shadow:0 6px 20px rgba(0,0,0,.3)}
+#toast.show{transform:translate(-50%,0)}
+#toast button{background:none;border:1px solid rgba(255,255,255,.4);color:#7ff0e0;border-radius:6px;padding:3px 10px;cursor:pointer;white-space:nowrap}
+@media (max-width:720px){#toast{bottom:84px}}
+.empty{text-align:center;padding:40px 16px;color:var(--muted)}
+.empty .btn{margin-top:12px}
+
+/* ---------- 列印 ---------- */
+.print-title{display:none}
+@media print{
+  @page{size:A4 landscape;margin:8mm}
+  body{background:#fff;color:#000}
+  .top,#nav,.pbar .tools,.issues,.legend,#toast,#ov,.noprint{display:none!important}
+  .print-title{display:block;font-size:16px;font-weight:700;margin-bottom:6px}
+  main{padding:0;max-width:none}
+  .grid-wrap{max-height:none;overflow:visible;border:0;box-shadow:none}
+  .grid thead th,.grid .name{position:static}
+  .grid td.c{height:26px;min-width:0}
+  .grid td.c .sh{line-height:20px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .grid th,.grid td{border-color:#999}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16"/><path d="M3 21h12"/><path d="M7 7h4v4H7z"/><path d="M14 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V8l-3-3"/></svg>
+    <span>加油站排班</span>
+  </div>
+  <select id="stSel" aria-label="切換加油站"></select>
+</header>
+<nav id="nav"></nav>
+<main id="main"></main>
+<div id="ov"><div id="sheet" role="dialog" aria-modal="true"></div></div>
+<div id="toast"></div>
+<input type="file" id="fileIn" accept=".json,application/json" hidden>
+
+<script>
+'use strict';
+/* =========================================================
+   加油站排班系統
+   資料只存在本機（localStorage），可匯出／匯入 JSON 備份。
+   ========================================================= */
+
+// ---------- 小工具 ----------
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = p => p + Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
+const WD = ['日','一','二','三','四','五','六'];
+const WEEK_ORDER = [1,2,3,4,5,6,0];
+const pad = n => String(n).padStart(2, '0');
+const ds = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const pd = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d, 12); };
+const addD = (s, n) => { const d = pd(s); d.setDate(d.getDate()+n); return ds(d); };
+const dow = s => pd(s).getDay();
+const dayNo = s => Math.round(pd(s).getTime() / 864e5);
+const diffD = (a, b) => dayNo(b) - dayNo(a);
+const todayStr = () => ds(new Date());
+const md = s => `${+s.slice(5,7)}/${+s.slice(8,10)}`;
+const tm = t => { const [h,m] = String(t||'0:0').split(':').map(Number); return h*60 + (m||0); };
+const fmtH = h => (Math.round(h*10)/10).toString();
+const range = (a, b) => { const r = []; for (let x = a; x <= b; x = addD(x, 1)) r.push(x); return r; };
+const addMonths = (s, n) => { const d = pd(s); const day = d.getDate(); d.setDate(1); d.setMonth(d.getMonth()+n); const last = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate(); d.setDate(Math.min(day, last)); return ds(d); };
+const monthStart = s => s.slice(0,8) + '01';
+const monthEnd = s => { const d = pd(s); return ds(new Date(d.getFullYear(), d.getMonth()+1, 0, 12)); };
+const weekStartOf = (s, ws) => { let x = s; while (dow(x) !== ws) x = addD(x, -1); return x; };
+const minS = (a, b) => a < b ? a : b, maxS = (a, b) => a > b ? a : b;
+
+const PALETTE = ['#e8930c','#2f7fe0','#8b5cf6','#16a34a','#e0457b','#0d9488','#d9480f','#64748b'];
+const OFF = {
+  R: {lb:'例', name:'例假'},
+  O: {lb:'休', name:'休息日'},
+  A: {lb:'特', name:'特休'},
+  L: {lb:'假', name:'請假'},
+  H: {lb:'國', name:'國定假日'},
+};
+// 國定假日（勞基法第37條適用）—— 請依行政院人事行政總處每年公告核對
+const DEFAULT_HOLIDAYS = [
+  ['2026-01-01','開國紀念日'],['2026-02-16','除夕'],['2026-02-17','春節'],['2026-02-18','春節'],['2026-02-19','春節'],
+  ['2026-02-28','和平紀念日'],['2026-04-04','兒童節'],['2026-04-05','清明節'],['2026-05-01','勞動節'],['2026-06-19','端午節'],
+  ['2026-09-25','中秋節'],['2026-09-28','教師節'],['2026-10-10','國慶日'],['2026-10-25','臺灣光復節'],['2026-12-25','行憲紀念日'],
+  ['2027-01-01','開國紀念日'],['2027-02-05','除夕'],['2027-02-06','春節'],['2027-02-07','春節'],['2027-02-08','春節'],
+  ['2027-02-28','和平紀念日'],['2027-04-04','兒童節'],['2027-04-05','清明節'],['2027-05-01','勞動節'],['2027-06-09','端午節'],
+  ['2027-09-15','中秋節'],['2027-09-28','教師節'],['2027-10-10','國慶日'],['2027-10-25','臺灣光復節'],['2027-12-25','行憲紀念日'],
+].map(([date, name]) => ({date, name}));
+
+// ---------- 資料 ----------
+const KEY = 'gasRoster.v1';
+let S;
+let undoSnap = null;
+const UI = { tab:'sched', anchor: todayStr(), view: matchMedia('(max-width:720px)').matches ? 'day' : 'grid', issuesOpen:false };
+
+function mkShift(name, short, start, end, color, need) {
+  return { id: uid('s'), name, short, start, end, breakMin: 0, color, need: Array.isArray(need) ? need.slice() : Array(7).fill(need) };
+}
+function newStation(name, mode = '24h') {
+  const st = {
+    id: uid('st'), name,
+    hours: { mode, days: Array.from({length:7}, () => ({ open:'07:00', close:'22:00', closed:false })) },
+    shifts: mode === '24h'
+      ? [mkShift('早班','早','07:00','15:00',PALETTE[0],2), mkShift('中班','中','15:00','23:00',PALETTE[1],2), mkShift('大夜','夜','23:00','07:00',PALETTE[2],1)]
+      : [mkShift('早班','早','07:00','15:00',PALETTE[0],2), mkShift('晚班','晚','14:00','22:00',PALETTE[1],2)],
+    emps: [], sched: {}, locks: {}, swaps: [], closedDays: [],
+    period: 'week', weekStart: 1, rules: { restGap: 11, otMax: 46 },
+  };
+  return st;
+}
+function mkEmp(o) {
+  return Object.assign({
+    id: uid('e'), name: '', type: 'full', hire: '', gender: '', nightOK: true, active: true, note: '',
+    avail: { days: [true,true,true,true,true,true,true], from: '00:00', to: '00:00' }, minWeek: 0, maxWeek: 0,
+  }, o);
+}
+function fixStation(st) {
+  st.sched ??= {}; st.locks ??= {}; st.swaps ??= []; st.closedDays ??= []; st.emps ??= []; st.shifts ??= [];
+  st.period ??= 'week'; st.weekStart ??= 1; st.rules ??= {}; st.rules.restGap ??= 11; st.rules.otMax ??= 46;
+  st.hours ??= newStation('').hours;
+  st.emps = st.emps.map(e => mkEmp(e));
+}
+function load() {
+  try {
+    const t = localStorage.getItem(KEY);
+    if (t) { const s = JSON.parse(t); if (s && Array.isArray(s.stations) && s.stations.length) { s.holidays ??= DEFAULT_HOLIDAYS.slice(); s.stations.forEach(fixStation); if (!s.stations.some(x => x.id === s.cur)) s.cur = s.stations[0].id; return s; } }
+  } catch (e) {}
+  return null;
+}
+function initState() { const st = newStation('我的加油站'); return { v:1, cur: st.id, stations: [st], holidays: DEFAULT_HOLIDAYS.slice() }; }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('儲存失敗：瀏覽器不允許儲存資料，請記得匯出備份'); } }
+try { const u = JSON.parse(localStorage.getItem(KEY + '.ui') || '{}'); if (u.tab) UI.tab = u.tab; if (u.view) UI.view = u.view; } catch (e) {}
+function saveUI() { try { localStorage.setItem(KEY + '.ui', JSON.stringify({ tab: UI.tab, view: UI.view })); } catch (e) {} }
+
+const cur = () => S.stations.find(s => s.id === S.cur);
+const activeEmps = st => st.emps.filter(e => e.active);
+const shiftMap = st => Object.fromEntries(st.shifts.map(s => [s.id, s]));
+const getCell = (st, d, e) => (st.sched[d] && st.sched[d][e]) || '';
+function setCell(st, d, e, v) {
+  if (v) (st.sched[d] ??= {})[e] = v;
+  else if (st.sched[d]) { delete st.sched[d][e]; if (!Object.keys(st.sched[d]).length) delete st.sched[d]; }
+}
+const isLocked = (st, d, e) => !!(st.locks[d] && st.locks[d][e]);
+function setLock(st, d, e, on) {
+  if (on) (st.locks[d] ??= {})[e] = 1;
+  else if (st.locks[d]) { delete st.locks[d][e]; if (!Object.keys(st.locks[d]).length) delete st.locks[d]; }
+}
+const holMap = () => Object.fromEntries(S.holidays.map(h => [h.date, h.name]));
+function isClosed(st, d) {
+  if (st.closedDays.some(c => c.date === d)) return true;
+  return st.hours.mode === 'custom' && st.hours.days[dow(d)].closed;
+}
+
+// ---------- 班別計算 ----------
+function shiftSpan(sh) { const s = tm(sh.start); let e = tm(sh.end); if (e <= s) e += 1440; return { s, e }; }
+function shiftHours(sh) { const { s, e } = shiftSpan(sh); return Math.max(0, (e - s - (+sh.breakMin || 0)) / 60); }
+const overlap = (a, b, c, d) => a < d && c < b;
+// 第49條的夜間（22:00–06:00）
+function isNight(sh) { const { s, e } = shiftSpan(sh); return overlap(s, e, -120, 360) || overlap(s, e, 1320, 1800); }
+// 大夜：班次涵蓋凌晨 00:00–05:00（員工「可排大夜」用）
+function isOvernight(sh) { const { s, e } = shiftSpan(sh); return overlap(s, e, 0, 300) || overlap(s, e, 1440, 1740); }
+function availOK(e, sh, d) {
+  if (e.type !== 'part') return true;
+  if (!e.avail.days[dow(d)]) return false;
+  const f = tm(e.avail.from); let t = tm(e.avail.to);
+  if (f === t) return true;
+  if (t <= f) t += 1440;
+  const { s, e: en } = shiftSpan(sh);
+  return s >= f && en <= t;
+}
+function codeLabel(st, c, long) {
+  if (!c) return long ? '未排' : '';
+  if (OFF[c]) return long ? OFF[c].name : OFF[c].lb;
+  const sh = st.shifts.find(s => s.id === c);
+  return sh ? (long ? `${sh.name} ${sh.start}–${sh.end}` : sh.short) : '?';
+}
+
+// ---------- 排班期間 ----------
+function periodDates(st, anchor) {
+  let a, b;
+  if (st.period === 'month') { a = monthStart(anchor); b = monthEnd(anchor); }
+  else {
+    a = weekStartOf(anchor, st.weekStart);
+    if (st.period === 'biweek') { const ref = weekStartOf('2026-01-05', st.weekStart); if (((Math.floor(diffD(ref, a) / 7)) % 2 + 2) % 2) a = addD(a, -7); }
+    b = addD(a, st.period === 'week' ? 6 : 13);
+  }
+  return range(a, b);
+}
+function periodLabel(st, dates) {
+  const a = dates[0], b = dates[dates.length-1];
+  if (st.period === 'month') return `${a.slice(0,4)} 年 ${+a.slice(5,7)} 月`;
+  return `${a.slice(0,4)}/${md(a)}（${WD[dow(a)]}）– ${a.slice(0,4) !== b.slice(0,4) ? b.slice(0,4) + '/' : ''}${md(b)}（${WD[dow(b)]}）`;
+}
+
+/* =========================================================
+   勞基法檢查
+   err：違法　warn：要注意（休息日出勤、超時、缺人）　info：提醒
+   ========================================================= */
+function analyze(st, dates) {
+  const start = dates[0], end = dates[dates.length-1], ws = st.weekStart;
+  const extS = weekStartOf(minS(addD(start, -14), monthStart(start)), ws);
+  const extE = addD(weekStartOf(maxS(addD(end, 7), monthEnd(end)), ws), 6);
+  const ext = range(extS, extE);
+  const inP = new Set(dates), smap = shiftMap(st), hol = holMap();
+  const restGap = +st.rules.restGap, otMax = +st.rules.otMax;
+  const res = { cell: {}, list: [], cov: {}, emp: {} };
+  const add = (lvl, e, d, msg, onCell = true) => {
+    if (d && !inP.has(d)) return;
+    if (onCell && d && e) (res.cell[d + '|' + e.id] ??= []).push({ lvl, msg });
+    res.list.push({ lvl, eid: e ? e.id : null, name: e ? e.name : '', d, msg, onCell: onCell && !!d && !!e });
+  };
+  const months = [...new Set(dates.map(d => d.slice(0,7)))];
+
+  for (const e of activeEmps(st)) {
+    const day = {};
+    for (const d of ext) {
+      const sh = smap[getCell(st, d, e.id)];
+      if (sh) { const sp = shiftSpan(sh), base = dayNo(d) * 1440; day[d] = { sh, h: shiftHours(sh), s: base + sp.s, e: base + sp.e }; }
+    }
+    const ot = {}, restWork = new Set();
+    // 每日工時（第32條：含加班一天不超過12小時）
+    for (const d of ext) if (day[d]) {
+      if (day[d].h > 12) add('err', e, d, `一天工時 ${fmtH(day[d].h)} 小時，含加班不得超過 12 小時（第32條）`);
+      ot[d] = Math.max(0, day[d].h - 8);
+    }
+    // 換班間隔（第34條）
+    let prev = null;
+    for (const d of ext) {
+      const w = day[d]; if (!w) continue;
+      if (prev) {
+        const gap = (w.s - prev.e) / 60;
+        if (gap < 0) add('err', e, d, `與 ${md(prev.d)} 的班次時間重疊`);
+        else if (gap < restGap) add('err', e, d, `與 ${md(prev.d)} 下班相隔只有 ${fmtH(gap)} 小時，換班應至少間隔 ${restGap} 小時（第34條）`);
+      }
+      prev = { ...w, d };
+    }
+    // 連續上班（第36條：每7日應有1日例假，不得連續工作超過6日）
+    let run = 0;
+    for (const d of ext) {
+      if (day[d]) { run++; if (run > 6) add('err', e, d, `連續上班第 ${run} 天，不得連續工作超過 6 天（第36條）`); }
+      else run = 0;
+    }
+    // 一例一休、每週40小時（第30、36條）
+    for (let w0 = extS; w0 <= extE; w0 = addD(w0, 7)) {
+      const wd = range(w0, addD(w0, 6));
+      const works = wd.filter(d => day[d]);
+      if (works.length >= 7) add('err', e, works[6], '本週 7 天都排班，沒有例假（例假不得出勤，第36條）');
+      else if (works.length === 6) {
+        const rd = works[5]; restWork.add(rd); ot[rd] = day[rd].h;
+        add('warn', e, rd, '本週只休 1 天，這天算「休息日出勤」，工時全部計入加班（第24、36條）');
+      }
+      let normal = 0;
+      for (const d of works) if (!restWork.has(d)) normal += Math.min(day[d].h, 8);
+      if (normal > 40) { const last = works.filter(d => !restWork.has(d)).pop(); ot[last] = (ot[last] || 0) + normal - 40; add('warn', e, last, `本週正常工時 ${fmtH(normal)} 小時，超過 40 小時的部分算加班（第30條）`); }
+      if (wd.every(d => inP.has(d)) && works.length < 7 && !wd.some(d => getCell(st, d, e.id) === 'R'))
+        add('warn', e, null, `${md(wd[0])}–${md(wd[6])} 這週還沒指定「例假」，請把一天休假標為「例」`, false);
+      if (e.type === 'part' && +e.maxWeek > 0) {
+        const hh = works.reduce((t, d) => t + day[d].h, 0);
+        if (hh > +e.maxWeek && works.length) add('warn', e, works[works.length-1], `本週排 ${fmtH(hh)} 小時，超過他希望的上限 ${e.maxWeek} 小時`);
+      }
+    }
+    // 每月加班上限（第32條）
+    const monthOT = {};
+    for (const d of ext) monthOT[d.slice(0,7)] = (monthOT[d.slice(0,7)] || 0) + (ot[d] || 0);
+    for (const m of months) {
+      const v = monthOT[m] || 0;
+      if (v > otMax) add('err', e, null, `${+m.slice(5)} 月加班 ${fmtH(v)} 小時，超過每月上限 ${otMax} 小時（第32條）`, false);
+      else if (v > otMax * 0.8) add('warn', e, null, `${+m.slice(5)} 月加班 ${fmtH(v)} 小時，接近每月上限 ${otMax} 小時`, false);
+    }
+    // 個人條件
+    let femNight = false;
+    for (const d of dates) {
+      const w = day[d]; if (!w) continue;
+      if (!availOK(e, w.sh, d)) add('warn', e, d, '不在他填的可上班日／時段');
+      if (isOvernight(w.sh) && !e.nightOK) add('warn', e, d, '這位員工設定為「不排大夜」');
+      if (isNight(w.sh) && e.gender === 'F') femNight = true;
+      if (isClosed(st, d)) add('warn', e, d, '這天設定為休業日');
+    }
+    if (femNight) add('info', e, null, '女性員工排到 22:00–06:00 的班：需經工會或勞資會議同意，並提供安全衛生設施與交通工具（第49條）', false);
+
+    // 統計
+    const sm = { days: 0, hours: 0, ot: 0, holH: 0, off: { R:0, O:0, A:0, L:0, H:0 }, monthOT };
+    for (const d of dates) {
+      const c = getCell(st, d, e.id);
+      if (day[d]) { sm.days++; sm.hours += day[d].h; sm.ot += ot[d] || 0; if (hol[d]) sm.holH += day[d].h; }
+      else if (OFF[c]) sm.off[c]++;
+    }
+    res.emp[e.id] = sm;
+  }
+  // 人力需求
+  const emps = activeEmps(st);
+  for (const d of dates) {
+    const cl = isClosed(st, d); res.cov[d] = {};
+    for (const sh of st.shifts) {
+      const need = cl ? 0 : (+sh.need[dow(d)] || 0);
+      const have = emps.filter(e => getCell(st, d, e.id) === sh.id).length;
+      res.cov[d][sh.id] = { have, need };
+      if (have < need) add('warn', null, d, `${sh.name}還缺 ${need - have} 人（需要 ${need}，已排 ${have}）`, false);
+    }
+  }
+  const rank = { err: 0, warn: 1, info: 2 };
+  res.list.sort((a, b) => rank[a.lvl] - rank[b.lvl] || String(a.d || '').localeCompare(String(b.d || '')));
+  return res;
+}
+
+// 排某人某天某班時會碰到的問題（自動排班時全部視為不能排）
+function assignReasons(st, e, d, sh) {
+  const R = [], smap = shiftMap(st);
+  if (isLocked(st, d, e.id)) R.push('已鎖定休假');
+  if (isClosed(st, d)) R.push('本日休業');
+  const sp = shiftSpan(sh), h = shiftHours(sh);
+  if (h > 12) R.push('班次超過 12 小時');
+  if (!availOK(e, sh, d)) R.push('不在可上班時段');
+  if (isOvernight(sh) && !e.nightOK) R.push('設定不排大夜');
+  const base = dayNo(d) * 1440, s = base + sp.s, en = base + sp.e;
+  for (const k of [-1, 1]) {
+    const dd = addD(d, k), s2 = smap[getCell(st, dd, e.id)];
+    if (!s2) continue;
+    const p = shiftSpan(s2), b2 = dayNo(dd) * 1440;
+    const gap = k < 0 ? (s - (b2 + p.e)) / 60 : ((b2 + p.s) - en) / 60;
+    if (gap < +st.rules.restGap) R.push(`與${k < 0 ? '前' : '隔'}一天班次只隔 ${fmtH(Math.max(0, gap))} 小時`);
+  }
+  const isW = x => !!smap[getCell(st, x, e.id)];
+  let back = 0, fwd = 0;
+  for (let x = addD(d, -1); back < 14 && isW(x); x = addD(x, -1)) back++;
+  for (let x = addD(d, 1); fwd < 14 && isW(x); x = addD(x, 1)) fwd++;
+  if (back + 1 + fwd > 6) R.push(`會連續上班 ${back + 1 + fwd} 天`);
+  const w0 = weekStartOf(d, st.weekStart); let wd = 0, wh = 0;
+  for (let i = 0; i < 7; i++) { const x = addD(w0, i); if (x === d) continue; const c = smap[getCell(st, x, e.id)]; if (c) { wd++; wh += shiftHours(c); } }
+  if (wd >= 6) R.push('本週會沒有例假');
+  else if (wd >= 5) R.push('本週已上 5 天（會變休息日出勤）');
+  const lim = e.type === 'part' ? (+e.maxWeek || 40) : 40;
+  if (wh + h > lim) R.push(`本週會達 ${fmtH(wh + h)} 小時（上限 ${lim}）`);
+  return R;
+}
+
+// ---------- 自動排班 ----------
+function weekLoad(st, e, d) {
+  const smap = shiftMap(st), w0 = weekStartOf(d, st.weekStart); let wd = 0, wh = 0;
+  for (let i = 0; i < 7; i++) { const c = smap[getCell(st, addD(w0, i), e.id)]; if (c) { wd++; wh += shiftHours(c); } }
+  return { wd, wh, left: 7 - diffD(w0, d) };
+}
+function score(st, e, d, sh) {
+  const { wd, wh, left } = weekLoad(st, e, d);
+  let sc;
+  if (e.type === 'full') sc = (5 - wd) / left * 100 + 30;
+  else {
+    const h = shiftHours(sh) || 1, max = +e.maxWeek || 40;
+    sc = Math.min(1, (max - wh) / h / left) * 100;
+    if (+e.minWeek && wh < +e.minWeek) sc += 25;
+  }
+  const y = getCell(st, addD(d, -1), e.id);
+  if (y === sh.id) sc += 15;
+  return sc + Math.random() * 6;
+}
+function autoSchedule(st, dates, mode) {
+  undoSnap = { sid: st.id, sched: JSON.stringify(st.sched), locks: JSON.stringify(st.locks) };
+  const emps = activeEmps(st), smap = shiftMap(st);
+  if (mode === 'all') for (const d of dates) for (const e of emps) {
+    const c = getCell(st, d, e.id);
+    if (!isLocked(st, d, e.id) && (smap[c] || c === 'R' || c === 'O' || c === 'H' || (c && !OFF[c]))) setCell(st, d, e.id, '');
+  }
+  const count = () => { let n = 0; for (const d of dates) for (const e of emps) if (smap[getCell(st, d, e.id)]) n++; return n; };
+  const before = count();
+  for (let round = 0; round < 6; round++) {
+    fillGreedy(st, dates, emps);
+    if (!repairShort(st, dates, emps)) break;
+  }
+  labelOffs(st, dates, emps);
+  save();
+  let short = 0;
+  for (const d of dates) if (!isClosed(st, d)) for (const sh of st.shifts) short += Math.max(0, (+sh.need[dow(d)] || 0) - emps.filter(e => getCell(st, d, e.id) === sh.id).length);
+  return { placed: count() - before, short };
+}
+const lackOf = (st, d, sh, emps) => isClosed(st, d) ? 0 : Math.max(0, (+sh.need[dow(d)] || 0) - emps.filter(e => getCell(st, d, e.id) === sh.id).length);
+function fillGreedy(st, dates, emps) {
+  for (const d of dates) {
+    if (isClosed(st, d)) continue;
+    const left = {};
+    for (const sh of st.shifts) left[sh.id] = lackOf(st, d, sh, emps);
+    // 每次先補「能排的人最少」的班（例如大夜），避免能上大夜的人先被早、中班用掉
+    for (;;) {
+      let pick = null;
+      for (const sh of st.shifts) {
+        if (!left[sh.id]) continue;
+        const cands = emps.filter(e => !getCell(st, d, e.id) && !assignReasons(st, e, d, sh).length);
+        const slack = cands.length - left[sh.id];
+        if (!pick || slack < pick.slack) pick = { sh, cands, slack };
+      }
+      if (!pick) break;
+      if (!pick.cands.length) { left[pick.sh.id] = 0; continue; }
+      let best = null, bs = -1e9;
+      for (const e of pick.cands) { const sc = score(st, e, d, pick.sh); if (sc > bs) { bs = sc; best = e; } }
+      setCell(st, d, best.id, pick.sh.id); left[pick.sh.id]--;
+    }
+  }
+}
+// 補缺人的班：把 A 從同一週的另一天（d2）移到缺人的這天，d2 那班再找別人頂上
+function repairShort(st, dates, emps) {
+  const inP = new Set(dates), smap = shiftMap(st);
+  const free = (e, d) => !getCell(st, d, e.id) && !isLocked(st, d, e.id);
+  let fixed = 0;
+  for (const d of dates) for (const sh of st.shifts) {
+    while (lackOf(st, d, sh, emps) > 0) {
+      let done = false;
+      for (const e of emps) {
+        if (!free(e, d)) continue;
+        const w0 = weekStartOf(d, st.weekStart);
+        for (let i = 0; i < 7 && !done; i++) {
+          const d2 = addD(w0, i);
+          if (d2 === d || !inP.has(d2) || isLocked(st, d2, e.id)) continue;
+          const sh2 = smap[getCell(st, d2, e.id)];
+          if (!sh2) continue;
+          setCell(st, d2, e.id, '');
+          if (!assignReasons(st, e, d, sh).length) {
+            setCell(st, d, e.id, sh.id);
+            const p = emps.find(p => p.id !== e.id && free(p, d2) && !assignReasons(st, p, d2, sh2).length);
+            if (p) { setCell(st, d2, p.id, sh2.id); done = true; fixed++; break; }
+            setCell(st, d, e.id, '');
+          }
+          setCell(st, d2, e.id, sh2.id);
+        }
+        if (done) break;
+      }
+      if (!done) break;
+    }
+  }
+  return fixed;
+}
+// 把空白的休假日標成 例／休／國
+function labelOffs(st, dates, emps) {
+  const inP = new Set(dates), smap = shiftMap(st), hol = holMap();
+  const weeks = [...new Set(dates.map(d => weekStartOf(d, st.weekStart)))];
+  for (const e of emps) for (const w0 of weeks) {
+    const wd = range(w0, addD(w0, 6)), codes = wd.map(x => getCell(st, x, e.id));
+    const works = codes.filter(c => smap[c]).length;
+    const empt = wd.filter((x, i) => inP.has(x) && !codes[i] && !isLocked(st, x, e.id)).reverse();
+    if (!codes.includes('R') && empt.length) setCell(st, empt.shift(), e.id, 'R');
+    if (!codes.includes('O') && works < 6 && empt.length) setCell(st, empt.shift(), e.id, 'O');
+    for (const x of empt) if (hol[x]) setCell(st, x, e.id, 'H');
+  }
+}
+function clearPeriod(st, dates) {
+  undoSnap = { sid: st.id, sched: JSON.stringify(st.sched), locks: JSON.stringify(st.locks) };
+  for (const d of dates) for (const e of st.emps) if (!isLocked(st, d, e.id)) setCell(st, d, e.id, '');
+  save();
+}
+function undo() {
+  if (!undoSnap) return;
+  const st = S.stations.find(s => s.id === undoSnap.sid);
+  if (st) { st.sched = JSON.parse(undoSnap.sched); st.locks = JSON.parse(undoSnap.locks); save(); }
+  undoSnap = null; render(); toast('已復原');
+}
+
+// ---------- 特休（第38條） ----------
+function annualLeave(st, e, ref) {
+  if (!e.hire || e.hire > ref) return null;
+  const h = e.hire;
+  let from, to, ent, yrs;
+  if (ref < addMonths(h, 6)) return { ent: 0, used: 0, from: null, to: addMonths(h, 6), yrs: 0 };
+  if (ref < addMonths(h, 12)) { from = addMonths(h, 6); to = addMonths(h, 12); ent = 3; yrs = 0.5; }
+  else {
+    let y = 1; while (ref >= addMonths(h, 12 * (y + 1))) y++;
+    from = addMonths(h, 12 * y); to = addMonths(h, 12 * (y + 1)); yrs = y;
+    ent = y < 2 ? 7 : y < 3 ? 10 : y < 5 ? 14 : y < 10 ? 15 : Math.min(30, 15 + (y - 9));
+  }
+  let used = 0;
+  for (const d in st.sched) if (d >= from && d < to && st.sched[d][e.id] === 'A') used++;
+  return { ent, used, from, to: addD(to, -1), yrs };
+}
+function tenure(h, ref) {
+  if (!h || h > ref) return '';
+  let m = 0; while (addMonths(h, m + 1) <= ref) m++;
+  const y = Math.floor(m / 12), r = m % 12;
+  return y ? `${y} 年${r ? ` ${r} 個月` : ''}` : `${r} 個月`;
+}
+
+/* =========================================================
+   畫面
+   ========================================================= */
+const ICON = {
+  sched: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M7 13h3M7 17h3M14 13h3"/></svg>',
+  staff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14.5c2.3 0 4 1.4 4.6 4"/></svg>',
+  stats: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+  set: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+  wand: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8 19 13M17.8 6.2 19 5M3 21l9-9M12.2 6.2 11 5"/></svg>',
+  out: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>',
+  left: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>',
+  right: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg>',
+};
+const TABS = [['sched','班表'],['staff','員工'],['stats','統計'],['set','設定']];
+
+function render() {
+  const st = cur();
+  $('#stSel').innerHTML = S.stations.map(s => `<option value="${s.id}" ${s.id === S.cur ? 'selected' : ''}>${esc(s.name)}</option>`).join('') + '<option value="__new">＋ 新增加油站…</option>';
+  $('#nav').innerHTML = TABS.map(([k, n]) => `<button data-tab="${k}" class="${UI.tab === k ? 'on' : ''}">${ICON[k]}<span>${n}</span></button>`).join('');
+  const m = $('#main');
+  const y = window.scrollY;
+  if (UI.tab === 'sched') m.innerHTML = renderSched(st);
+  else if (UI.tab === 'staff') m.innerHTML = renderStaff(st);
+  else if (UI.tab === 'stats') m.innerHTML = renderStats(st);
+  else m.innerHTML = renderSettings(st);
+  window.scrollTo(0, y);
+}
+
+function periodBar(st, dates, tools = '') {
+  return `<div class="pbar">
+    <button class="btn icon" data-act="prev" aria-label="上一期">${ICON.left}</button>
+    <button class="btn icon" data-act="next" aria-label="下一期">${ICON.right}</button>
+    <div class="lbl">${periodLabel(st, dates)}</div>
+    <div class="seg noprint">${[['week','週'],['biweek','雙週'],['month','月']].map(([k, n]) => `<button data-act="period" data-v="${k}" class="${st.period === k ? 'on' : ''}">${n}</button>`).join('')}</div>
+    <button class="btn sm noprint" data-act="today">本期</button>
+    <div class="tools">${tools}</div>
+  </div>`;
+}
+
+// ----- 班表 -----
+function renderSched(st) {
+  const dates = periodDates(st, UI.anchor);
+  if (!activeEmps(st).length) return periodBar(st, dates) + `<div class="card empty">這個站還沒有員工。<br>先到「員工」新增人員，或到「設定」載入範例資料試用看看。<br><button class="btn pri" data-tab="staff">新增員工</button> <button class="btn" data-act="sample">載入範例資料</button></div>`;
+  const A = analyze(st, dates);
+  const nErr = A.list.filter(i => i.lvl === 'err').length, nWarn = A.list.filter(i => i.lvl === 'warn').length;
+  const tools = `
+    <div class="seg">${[['grid','表格'],['day','每日']].map(([k, n]) => `<button data-act="view" data-v="${k}" class="${UI.view === k ? 'on' : ''}">${n}</button>`).join('')}</div>
+    <button class="btn" data-act="issues">問題 ${nErr ? `<span class="cnt">${nErr}</span>` : ''}${nWarn ? `<span class="cnt w">${nWarn}</span>` : ''}${!nErr && !nWarn ? '<span class="tag ok">0</span>' : ''}</button>
+    <button class="btn" data-act="export">${ICON.out}匯出</button>
+    <button class="btn pri" data-act="auto">${ICON.wand}自動排班</button>`;
+  return `<div class="print-title">${esc(st.name)}　班表　${periodLabel(st, dates)}</div>`
+    + periodBar(st, dates, tools)
+    + (UI.view === 'grid' ? gridHtml(st, dates, A) : dayHtml(st, dates, A))
+    + issuesHtml(A);
+}
+function worst(iss) { return !iss ? '' : iss.some(i => i.lvl === 'err') ? 'e-err' : iss.some(i => i.lvl === 'warn') ? 'e-warn' : ''; }
+function gridHtml(st, dates, A) {
+  const smap = shiftMap(st), hol = holMap(), today = todayStr();
+  let h = '<div class="grid-wrap"><table class="grid"><thead><tr><th class="name">員工</th>';
+  for (const d of dates) {
+    const w = dow(d), cls = [w === 0 || w === 6 ? 'we' : '', hol[d] ? 'hol' : '', d === today ? 'today' : '', isClosed(st, d) ? 'cl' : ''].join(' ');
+    h += `<th class="${cls}" title="${esc(hol[d] || (isClosed(st, d) ? '休業' : ''))}">${md(d)}<div class="wd">${WD[w]}${hol[d] ? '・' + esc(hol[d].slice(0, 2)) : ''}</div></th>`;
+  }
+  h += '<th class="sum">時數</th><th class="sum">加班</th></tr></thead><tbody>';
+  for (const e of activeEmps(st)) {
+    const sm = A.emp[e.id];
+    h += `<tr><th class="name" data-act="editEmp" data-id="${e.id}" title="${esc(e.name)}">${esc(e.name)}<span class="badge ${e.type}">${e.type === 'full' ? '正' : '計'}</span></th>`;
+    for (const d of dates) {
+      const c = getCell(st, d, e.id), sh = smap[c];
+      const cls = ['c', worst(A.cell[d + '|' + e.id]), isLocked(st, d, e.id) ? 'lk' : '', hol[d] ? 'hol' : '', isClosed(st, d) ? 'cl' : ''].join(' ');
+      const inner = sh ? `<span class="sh" style="--sc:${sh.color}">${esc(sh.short)}</span>` : c ? `<span class="of ${OFF[c] ? c : ''}">${codeLabel(st, c)}</span>` : '';
+      h += `<td class="${cls}" data-act="cell" data-d="${d}" data-e="${e.id}">${inner}</td>`;
+    }
+    h += `<td class="sum">${fmtH(sm.hours)}</td><td class="sum ${sm.ot > 0 ? 'bad' : ''}">${sm.ot ? fmtH(sm.ot) : '–'}</td></tr>`;
+  }
+  h += '</tbody><tfoot>';
+  for (const sh of st.shifts) {
+    h += `<tr><th class="name">${esc(sh.name)} 人數</th>`;
+    for (const d of dates) { const c = A.cov[d][sh.id]; h += `<td class="${c.have < c.need ? 'short' : 'ok'}">${c.need || c.have ? `${c.have}/${c.need}` : '–'}</td>`; }
+    h += '<td class="sum"></td><td class="sum"></td></tr>';
+  }
+  h += '</tfoot></table></div>';
+  h += `<div class="legend">${st.shifts.map(s => `<span><i style="background:${s.color}"></i>${esc(s.short)}＝${esc(s.name)} ${s.start}–${s.end}</span>`).join('')}
+    <span>例＝例假　休＝休息日　特＝特休　假＝請假　國＝國定假日</span>
+    <span><i style="background:var(--info)"></i>右上角藍角＝已鎖定的休假</span>
+    <span><i style="background:var(--err)"></i>紅框＝違反勞基法</span><span><i style="background:var(--warn)"></i>橘框＝要注意</span></div>`;
+  return h;
+}
+function dayHtml(st, dates, A) {
+  const hol = holMap(), today = todayStr(), emps = activeEmps(st);
+  let h = '<div class="days">';
+  for (const d of dates) {
+    const cl = isClosed(st, d);
+    const shortN = st.shifts.reduce((t, sh) => t + Math.max(0, A.cov[d][sh.id].need - A.cov[d][sh.id].have), 0);
+    h += `<section class="card day ${d === today ? 'today' : ''}"><h3>${md(d)}（${WD[dow(d)]}）${hol[d] ? `<span class="tag hol">${esc(hol[d])}</span>` : ''}${cl ? '<span class="tag cls">休業</span>' : ''}${shortN ? `<span class="tag err">缺 ${shortN} 人</span>` : ''}</h3>`;
+    for (const sh of st.shifts) {
+      const c = A.cov[d][sh.id];
+      const on = emps.filter(e => getCell(st, d, e.id) === sh.id);
+      h += `<div class="srow"><div class="slabel" style="--sc:${sh.color}">${esc(sh.name)}<small>${sh.start}–${sh.end}</small></div><div class="chips">`
+        + on.map(e => `<button class="chip ${worst(A.cell[d + '|' + e.id])}" data-act="cell" data-d="${d}" data-e="${e.id}">${esc(e.name)}${isLocked(st, d, e.id) ? '<span class="lkm">🔒</span>' : ''}</button>`).join('')
+        + `<button class="chip add" data-act="addTo" data-d="${d}" data-s="${sh.id}" aria-label="加人到${esc(sh.name)}">＋</button></div><div class="cntb ${c.have < c.need ? 'short' : ''}">${c.have}/${c.need}</div></div>`;
+    }
+    const offs = emps.filter(e => { const c = getCell(st, d, e.id); return !c || OFF[c]; });
+    if (offs.length) h += `<div class="offrow">休：${offs.map(e => { const c = getCell(st, d, e.id); return `<button class="chip ${worst(A.cell[d + '|' + e.id])}" data-act="cell" data-d="${d}" data-e="${e.id}">${esc(e.name)}${c ? `·${OFF[c].lb}` : '·未排'}${isLocked(st, d, e.id) ? '<span class="lkm">🔒</span>' : ''}</button>`; }).join('')}</div>`;
+    h += '</section>';
+  }
+  return h + '</div>';
+}
+function issuesHtml(A) {
+  const n = A.list.length;
+  const lv = { err: '違法', warn: '注意', info: '提醒' };
+  return `<details class="card issues" ${UI.issuesOpen ? 'open' : ''} id="issBox"><summary>檢查結果 ${n ? `（${n} 項）` : '<span class="tag ok">沒有問題 ✓</span>'}<small>點一下展開／收合</small></summary>
+    ${n ? `<ul class="iss">${A.list.map(i => `<li class="${i.lvl}" ${i.onCell ? `data-act="cell" data-d="${i.d}" data-e="${i.eid}"` : ''}><b>${lv[i.lvl]}</b><span>${i.d ? md(i.d) + '（' + WD[dow(i.d)] + '）' : ''}${i.name ? esc(i.name) + '：' : ''}${esc(i.msg)}</span></li>`).join('')}</ul>` : '<p class="hint">本期班表符合目前設定的勞基法檢查項目，且人力都排滿了。</p>'}
+  </details>`;
+}
+
+// ----- 員工 -----
+function renderStaff(st) {
+  const ref = todayStr();
+  const list = st.emps.map((e, i) => {
+    const al = annualLeave(st, e, ref);
+    const sub = [e.type === 'full' ? '正職' : '計時', e.hire ? `年資 ${tenure(e.hire, ref) || '未滿 1 個月'}` : '未填到職日',
+      al && al.ent ? `特休剩 ${al.ent - al.used}/${al.ent} 天` : '',
+      e.type === 'part' ? `可上：${e.avail.days.every(Boolean) ? '每天' : WEEK_ORDER.filter(w => e.avail.days[w]).map(w => WD[w]).join('')} ${e.avail.from === e.avail.to ? '全天' : e.avail.from + '–' + e.avail.to}` : '',
+      e.nightOK ? '' : '不排大夜', e.active ? '' : '已離職／停用'].filter(Boolean).join('・');
+    return `<div class="emp ${e.active ? '' : 'inactive'}"><div class="info" data-act="editEmp" data-id="${e.id}"><b>${esc(e.name)}</b><span class="badge ${e.type}">${e.type === 'full' ? '正職' : '計時'}</span><div>${esc(sub)}</div></div>
+      <button class="btn sm icon" data-act="empMove" data-id="${e.id}" data-k="-1" ${i ? '' : 'disabled'} aria-label="往上">▲</button><button class="btn sm icon" data-act="empMove" data-id="${e.id}" data-k="1" ${i < st.emps.length - 1 ? '' : 'disabled'} aria-label="往下">▼</button></div>`;
+  }).join('');
+  const nf = st.emps.filter(e => e.active && e.type === 'full').length, np = st.emps.filter(e => e.active && e.type === 'part').length;
+  return `<div class="pbar"><div class="lbl">${esc(st.name)}・員工</div><span class="muted">正職 ${nf} 人・計時 ${np} 人</span><div class="tools"><button class="btn pri" data-act="addEmp">＋ 新增員工</button></div></div>
+    ${st.emps.length ? `<div class="list">${list}</div><p class="hint">點員工可以編輯。用 ▲▼ 調整在班表上的順序。</p>` : '<div class="card empty">還沒有員工，按右上角「新增員工」開始。</div>'}`;
+}
+function openEmp(id) {
+  const st = cur(), isNew = !id;
+  const e = isNew ? mkEmp({}) : st.emps.find(x => x.id === id);
+  const days = WEEK_ORDER.map(w => `<label><input type="checkbox" name="ad" value="${w}" ${e.avail.days[w] ? 'checked' : ''}>${WD[w]}</label>`).join('');
+  openSheet(isNew ? '新增員工' : '編輯員工', `
+    <label class="fld"><span>姓名</span><input type="text" id="fName" value="${esc(e.name)}" maxlength="20" autocomplete="off"></label>
+    <div class="fld"><span>類型</span><div class="seg" id="fType">${[['full','正職'],['part','計時（部分工時）']].map(([k, n]) => `<button type="button" data-v="${k}" class="${e.type === k ? 'on' : ''}">${n}</button>`).join('')}</div></div>
+    <div class="row gap">
+      <label class="fld grow"><span>到職日（算特休）</span><input type="date" id="fHire" value="${e.hire}"></label>
+      <label class="fld"><span>性別（夜間工作提醒用）</span><select id="fGender"><option value="">不填</option><option value="M" ${e.gender === 'M' ? 'selected' : ''}>男</option><option value="F" ${e.gender === 'F' ? 'selected' : ''}>女</option></select></label>
+    </div>
+    <label class="chk"><input type="checkbox" id="fNight" ${e.nightOK ? 'checked' : ''}>可以排大夜（跨午夜的班）</label>
+    <div id="fPart" style="${e.type === 'part' ? '' : 'display:none'}">
+      <div class="sec">計時人員可上班時間</div>
+      <div class="days7">${days}</div>
+      <div class="row gap" style="margin-top:8px">
+        <label class="fld"><span>從</span><input type="time" id="fFrom" value="${e.avail.from}"></label>
+        <label class="fld"><span>到</span><input type="time" id="fTo" value="${e.avail.to}"></label>
+        <label class="fld"><span>每週至少（小時）</span><input type="number" id="fMin" min="0" max="60" value="${+e.minWeek || ''}"></label>
+        <label class="fld"><span>每週最多（小時）</span><input type="number" id="fMax" min="0" max="60" value="${+e.maxWeek || ''}"></label>
+      </div>
+      <p class="hint" style="margin-top:0">「從」和「到」設一樣（例如都是 00:00）代表全天都可以。</p>
+    </div>
+    <label class="fld" style="margin-top:10px"><span>備註</span><input type="text" id="fNote" value="${esc(e.note)}" maxlength="60"></label>
+    ${isNew ? '' : `<label class="chk"><input type="checkbox" id="fActive" ${e.active ? 'checked' : ''}>在職（取消勾選＝離職，不會出現在班表，但保留紀錄）</label>`}
+    <div class="foot">${isNew ? '' : `<button class="btn danger" data-act="delEmp" data-id="${e.id}">刪除</button>`}<span class="grow"></span><button class="btn" data-act="close">取消</button><button class="btn pri" data-act="saveEmp" data-id="${isNew ? '' : e.id}">儲存</button></div>`);
+  $('#fType').onclick = ev => { const b = ev.target.closest('button'); if (!b) return; $('#fType').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); $('#fPart').style.display = b.dataset.v === 'part' ? '' : 'none'; };
+  if (isNew) setTimeout(() => $('#fName').focus(), 50);
+}
+function saveEmp(id) {
+  const st = cur(), name = $('#fName').value.trim();
+  if (!name) { toast('請輸入姓名'); return; }
+  const e = id ? st.emps.find(x => x.id === id) : mkEmp({});
+  e.name = name;
+  e.type = $('#fType .on').dataset.v;
+  e.hire = $('#fHire').value;
+  e.gender = $('#fGender').value;
+  e.nightOK = $('#fNight').checked;
+  e.note = $('#fNote').value.trim();
+  const ad = [false,false,false,false,false,false,false];
+  document.querySelectorAll('input[name=ad]').forEach(x => { if (x.checked) ad[+x.value] = true; });
+  e.avail = { days: ad, from: $('#fFrom').value || '00:00', to: $('#fTo').value || '00:00' };
+  e.minWeek = +$('#fMin').value || 0; e.maxWeek = +$('#fMax').value || 0;
+  if ($('#fActive')) e.active = $('#fActive').checked;
+  if (!id) st.emps.push(e);
+  save(); closeSheet(); render(); toast(id ? '已更新' : `已新增 ${name}`);
+}
+
+// ----- 統計 -----
+function renderStats(st) {
+  const dates = periodDates(st, UI.anchor), A = analyze(st, dates), emps = activeEmps(st), ref = dates[0];
+  const months = [...new Set(dates.map(d => d.slice(0, 7)))];
+  const otMax = +st.rules.otMax;
+  let h = periodBar(st, dates);
+  h += `<section class="card"><h2>工時統計（本期）</h2><div class="tbl-wrap"><table class="tbl"><thead><tr><th>員工</th><th>上班天數</th><th>總工時</th><th>加班</th>${months.map(m => `<th>${+m.slice(5)}月累計加班</th>`).join('')}<th>國定假日出勤</th><th>例</th><th>休</th><th>特休</th><th>請假</th></tr></thead><tbody>`;
+  let tH = 0, tO = 0;
+  for (const e of emps) {
+    const s = A.emp[e.id]; tH += s.hours; tO += s.ot;
+    h += `<tr><td>${esc(e.name)}<span class="badge ${e.type}">${e.type === 'full' ? '正' : '計'}</span></td><td>${s.days}</td><td>${fmtH(s.hours)}</td><td class="${s.ot ? 'wn' : ''}">${fmtH(s.ot)}</td>${months.map(m => { const v = s.monthOT[m] || 0; return `<td class="${v > otMax ? 'bad' : v > otMax * 0.8 ? 'wn' : ''}">${fmtH(v)} / ${otMax}</td>`; }).join('')}<td>${s.holH ? fmtH(s.holH) + ' 時' : '–'}</td><td>${s.off.R}</td><td>${s.off.O}</td><td>${s.off.A}</td><td>${s.off.L}</td></tr>`;
+  }
+  h += `</tbody><tfoot><tr><th>合計</th><th></th><th>${fmtH(tH)}</th><th>${fmtH(tO)}</th>${months.map(() => '<th></th>').join('')}<th></th><th></th><th></th><th></th><th></th></tr></tfoot></table></div>
+    <p class="hint">加班＝每天超過 8 小時＋每週正常工時超過 40 小時＋休息日出勤。月累計包含本期以外、同月份已排的班。工時已扣除班別設定的休息時間。</p></section>`;
+  h += `<section class="card"><h2>特休（依到職日週年計算，第38條）</h2><div class="tbl-wrap"><table class="tbl"><thead><tr><th>員工</th><th>到職日</th><th>年資</th><th>本年度區間</th><th>應給</th><th>已排</th><th>剩餘</th></tr></thead><tbody>`;
+  for (const e of emps) {
+    const al = annualLeave(st, e, ref);
+    if (!al) { h += `<tr><td>${esc(e.name)}</td><td colspan="6" class="muted" style="text-align:left">${e.hire ? '尚未到職' : '未填到職日'}</td></tr>`; continue; }
+    h += `<tr><td>${esc(e.name)}</td><td>${e.hire}</td><td>${tenure(e.hire, ref) || '未滿 1 個月'}</td><td>${al.from ? `${al.from} ～ ${al.to}` : `${al.to} 起滿半年`}</td><td>${al.ent}</td><td>${al.used}</td><td class="${al.ent - al.used < 0 ? 'bad' : ''}">${al.ent - al.used}</td></tr>`;
+  }
+  h += `</tbody></table></div><p class="hint">「已排」是班表上標為「特」的天數。滿半年 3 天、滿 1 年 7 天、滿 2 年 10 天、滿 3 年 14 天、滿 5 年 15 天，滿 10 年起每年加 1 天，最多 30 天。</p></section>`;
+  h += `<section class="card"><h2>換班紀錄</h2>${st.swaps.length ? st.swaps.slice(0, 200).map(w => `<div class="log"><div class="t"><b>${md(w.d)}（${WD[dow(w.d)]}）</b>　${esc(w.aName)}〔${esc(w.aFrom)}〕⇄ ${esc(w.bName)}〔${esc(w.bFrom)}〕${w.note ? `<small>原因：${esc(w.note)}</small>` : ''}<small>記錄時間：${new Date(w.ts).toLocaleString('zh-TW', { hour12: false })}</small></div><button class="btn sm" data-act="delSwap" data-id="${w.id}">刪除</button></div>`).join('') : '<p class="hint">還沒有換班紀錄。在班表上點某人的格子，選「與同事換班／代班」就會自動記錄。</p>'}</section>`;
+  return h;
+}
+
+// ----- 設定 -----
+function renderSettings(st) {
+  const hd = st.hours.days;
+  const hoursTbl = st.hours.mode === 'custom' ? `<table class="hours"><tbody>${WEEK_ORDER.map(w => `<tr><th>星期${WD[w]}</th><td><input type="time" data-f="hOpen" data-w="${w}" value="${hd[w].open}" ${hd[w].closed ? 'disabled' : ''}></td><td>–</td><td><input type="time" data-f="hClose" data-w="${w}" value="${hd[w].close}" ${hd[w].closed ? 'disabled' : ''}></td><td><label class="chk"><input type="checkbox" data-f="hClosed" data-w="${w}" ${hd[w].closed ? 'checked' : ''}>公休</label></td></tr>`).join('')}</tbody></table>
+    <button class="btn sm" data-act="hoursAll">把星期一的時間套用到每一天</button>` : '';
+  const shifts = st.shifts.map((sh, i) => `<div class="shift-card" style="--sc:${sh.color}">
+    <div class="row gap">
+      <label>名稱<input type="text" data-f="shName" data-i="${i}" value="${esc(sh.name)}" maxlength="8" style="width:90px"></label>
+      <label>簡稱<input type="text" data-f="shShort" data-i="${i}" value="${esc(sh.short)}" maxlength="2" style="width:52px"></label>
+      <label>上班<input type="time" data-f="shStart" data-i="${i}" value="${sh.start}"></label>
+      <label>下班<input type="time" data-f="shEnd" data-i="${i}" value="${sh.end}"></label>
+      <label>休息(分)<input type="number" data-f="shBreak" data-i="${i}" value="${+sh.breakMin || 0}" min="0" max="240" step="10"></label>
+      <span class="grow"></span>
+      <button class="btn sm danger" data-act="delShift" data-i="${i}">刪除</button>
+    </div>
+    <div class="row gap" style="margin-top:8px"><span class="muted" style="font-size:13px">顏色</span><div class="sw">${PALETTE.map(c => `<button data-act="shColor" data-i="${i}" data-c="${c}" style="--c:${c}" class="${sh.color === c ? 'on' : ''}" aria-label="顏色"></button>`).join('')}</div>
+      <span class="muted" style="font-size:13px">工時 ${fmtH(shiftHours(sh))} 小時${isOvernight(sh) ? '・大夜' : ''}</span></div>
+    <div class="sec" style="margin:8px 0 0">每天需要幾個人</div>
+    <div class="needs">${WEEK_ORDER.map(w => `<label>${WD[w]}<input type="number" min="0" max="30" data-f="shNeed" data-i="${i}" data-w="${w}" value="${+sh.need[w] || 0}"></label>`).join('')}</div>
+  </div>`).join('');
+  const years = [...new Set(S.holidays.map(h => h.date.slice(0, 4)))].sort();
+  return `
+  <section class="card"><h2>加油站</h2>
+    <label class="fld"><span>站名</span><input type="text" data-f="stName" value="${esc(st.name)}" maxlength="30"></label>
+    <div class="row gap"><button class="btn" data-act="newStation">＋ 新增加油站</button><button class="btn" data-act="copyStation">複製本站設定成新站</button><button class="btn danger" data-act="delStation">刪除本站</button></div>
+    <p class="hint">目前共 ${S.stations.length} 個站，在畫面最上方切換。每個站的營業時間、班別、員工和班表都分開管理。</p>
+  </section>
+
+  <section class="card"><h2>營業時間</h2>
+    <div class="seg" style="margin-bottom:10px">${[['24h','24 小時營業'],['custom','自訂營業時間']].map(([k, n]) => `<button data-act="hMode" data-v="${k}" class="${st.hours.mode === k ? 'on' : ''}">${n}</button>`).join('')}</div>
+    ${hoursTbl}
+    <div class="sec">特殊休業日（例如整修、颱風）</div>
+    <div class="hol-list">${st.closedDays.length ? st.closedDays.map((c, i) => `<span>${c.date}${c.note ? ' ' + esc(c.note) : ''}<button data-act="delClosed" data-i="${i}" aria-label="移除">×</button></span>`).join('') : '<span class="muted" style="background:none">沒有</span>'}</div>
+    <div class="row gap"><input type="date" id="cdDate"><input type="text" id="cdNote" placeholder="原因（可不填）" maxlength="20"><button class="btn sm" data-act="addClosed">加入</button></div>
+  </section>
+
+  <section class="card"><h2>班別與人力需求</h2>
+    ${shifts}
+    <button class="btn" data-act="addShift">＋ 新增班別</button>
+    <div class="sec">營業時間檢查</div>
+    <div id="covCheck">${coverageCheck(st)}</div>
+  </section>
+
+  <section class="card"><h2>排班週期</h2>
+    <div class="row gap">
+      <label class="fld"><span>一次排多久</span><select data-f="period"><option value="week" ${st.period === 'week' ? 'selected' : ''}>每週</option><option value="biweek" ${st.period === 'biweek' ? 'selected' : ''}>每兩週</option><option value="month" ${st.period === 'month' ? 'selected' : ''}>每月</option></select></label>
+      <label class="fld"><span>每週從星期幾開始（一例一休的週期）</span><select data-f="weekStart">${WEEK_ORDER.map(w => `<option value="${w}" ${+st.weekStart === w ? 'selected' : ''}>星期${WD[w]}</option>`).join('')}</select></label>
+    </div>
+  </section>
+
+  <section class="card"><h2>勞基法檢查</h2>
+    <div class="row gap">
+      <label class="fld"><span>換班間隔至少</span><select data-f="restGap"><option value="11" ${+st.rules.restGap === 11 ? 'selected' : ''}>11 小時（一般規定）</option><option value="8" ${+st.rules.restGap === 8 ? 'selected' : ''}>8 小時（經勞動部公告並經勞資會議同意）</option></select></label>
+      <label class="fld"><span>每月加班上限</span><select data-f="otMax"><option value="46" ${+st.rules.otMax === 46 ? 'selected' : ''}>46 小時（一般規定）</option><option value="54" ${+st.rules.otMax === 54 ? 'selected' : ''}>54 小時（經勞資會議同意，每 3 個月不超過 138）</option></select></label>
+    </div>
+    <ul class="rules">
+      <li>每 7 天要有 1 天例假、1 天休息日；例假不能排班，也不能連續上班超過 6 天（第36條）</li>
+      <li>每天正常工時 8 小時、每週 40 小時，超過的算加班（第30條）</li>
+      <li>一天含加班不能超過 12 小時；每月加班不超過上面設定的上限（第32條）</li>
+      <li>換班時，下班到下一次上班至少要隔上面設定的時數（第34條）</li>
+      <li>計時人員也適用上面的規定；另外會檢查他填的可上班時段和每週時數上限</li>
+      <li>女性員工排到 22:00–06:00 會提醒需要勞資會議同意（第49條）</li>
+      <li>班別超過 4 小時要有 30 分鐘休息；輪班制或工作有連續性的，可以在班內調配休息時間（第35條）</li>
+    </ul>
+    <p class="hint">這個工具不使用變形工時。系統檢查是協助用，實際適用仍以主管機關解釋為準。</p>
+  </section>
+
+  <section class="card"><h2>國定假日</h2>
+    ${years.map(y => `<div class="sec">${y} 年</div><div class="hol-list">${S.holidays.map((hh, i) => hh.date.startsWith(y) ? `<span>${md(hh.date)} ${esc(hh.name)}<button data-act="delHol" data-i="${i}" aria-label="移除">×</button></span>` : '').join('')}</div>`).join('')}
+    <div class="row gap"><input type="date" id="hDate"><input type="text" id="hName" placeholder="名稱" maxlength="12"><button class="btn sm" data-act="addHol">加入</button><button class="btn sm" data-act="resetHol">恢復預設清單</button></div>
+    <p class="hint">所有站共用。請依行政院人事行政總處每年公告核對；國定假日剛好遇到例假或休息日時的補假，請在班表上自行安排。</p>
+  </section>
+
+  <section class="card"><h2>資料與備份</h2>
+    <p class="hint" style="margin:0 0 10px">資料只存在這台手機或電腦的瀏覽器裡。換手機、清除瀏覽器資料前，記得先匯出備份。各站站長也可以把「本站備份」傳給主管，主管用「匯入」合併。</p>
+    <div class="row gap">
+      <button class="btn" data-act="exportAll">${ICON.out}匯出全部備份</button>
+      <button class="btn" data-act="exportStation">${ICON.out}匯出本站備份</button>
+      <button class="btn" data-act="import">匯入備份</button>
+      <button class="btn" data-act="sample">載入範例資料</button>
+      <button class="btn danger" data-act="resetAll">清除全部資料</button>
+    </div>
+  </section>
+
+  <section class="card"><h2>安裝到手機</h2>
+    <p class="hint" style="margin:0 0 10px">安裝後手機桌面會有圖示，像 App 一樣打開，沒有網路也能用。</p>
+    <button class="btn pri" data-act="install" id="installBtn" ${deferredInstall ? '' : 'hidden'}>安裝到這台裝置</button>
+    <ul class="rules"><li><b>Android（Chrome）</b>：右上角 ⋮ →「加到主畫面」或「安裝應用程式」</li><li><b>iPhone（Safari）</b>：下方分享按鈕 →「加入主畫面」</li></ul>
+  </section>`;
+}
+// 檢查班別有沒有涵蓋營業時間
+function coverageCheck(st) {
+  const out = [];
+  for (const w of WEEK_ORDER) {
+    const hd = st.hours.days[w];
+    if (st.hours.mode === 'custom' && hd.closed) { out.push(`<div>星期${WD[w]}：公休</div>`); continue; }
+    let o = 0, c = 1440;
+    if (st.hours.mode === 'custom') { o = tm(hd.open); c = tm(hd.close); if (c <= o) c += 1440; }
+    const cov = new Uint8Array(2880 / 15);
+    const pw = (w + 6) % 7;
+    for (const sh of st.shifts) {
+      const { s, e } = shiftSpan(sh);
+      if (+sh.need[w] > 0) for (let t = s; t < e; t += 15) cov[t / 15 | 0] = 1;
+      if (+sh.need[pw] > 0 && e > 1440) for (let t = s - 1440; t < e - 1440; t += 15) if (t >= 0) cov[t / 15 | 0] = 1;
+    }
+    const gaps = []; let g = null;
+    for (let t = o; t < c; t += 15) {
+      if (!cov[t / 15 | 0]) { if (g === null) g = t; }
+      else if (g !== null) { gaps.push([g, t]); g = null; }
+    }
+    if (g !== null) gaps.push([g, c]);
+    const f = m => `${pad(Math.floor(m / 60) % 24)}:${pad(m % 60)}`;
+    out.push(`<div>星期${WD[w]}：${gaps.length ? `<span class="cov-bad">${gaps.map(([a, b]) => `${f(a)}–${f(b)}`).join('、')} 沒有安排班別</span>` : '<span class="cov-ok">營業時間都有人 ✓</span>'}</div>`);
+  }
+  const notes = [];
+  for (const sh of st.shifts) {
+    const { s, e } = shiftSpan(sh);
+    if (e - s > 240 && (+sh.breakMin || 0) < 30) notes.push(`${esc(sh.name)}超過 4 小時、休息時間未滿 30 分鐘：若為輪班制或工作有連續性，可在班內調配休息（第35條）。`);
+    if (shiftHours(sh) > 8) notes.push(`${esc(sh.name)}工時 ${fmtH(shiftHours(sh))} 小時，超過 8 小時的部分每天都會算加班。`);
+  }
+  return out.join('') + (notes.length ? `<p class="hint">${notes.join('<br>')}</p>` : '');
+}
+
+// ---------- 彈出視窗 ----------
+function openSheet(title, body) {
+  $('#sheet').innerHTML = `<div class="hd"><h3>${title}</h3><button class="x" data-act="close" aria-label="關閉">×</button></div>${body}`;
+  $('#ov').classList.add('show');
+  $('#sheet').scrollTop = 0;
+}
+function closeSheet() { $('#ov').classList.remove('show'); }
+let toastTimer;
+function toast(msg, act, fn) {
+  const t = $('#toast');
+  t.innerHTML = `<span>${esc(msg)}</span>` + (act ? `<button>${esc(act)}</button>` : '');
+  if (act) t.querySelector('button').onclick = () => { t.classList.remove('show'); fn(); };
+  t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), act ? 7000 : 2600);
+}
+function confirmSheet(title, msg, okLabel, fn, danger) {
+  openSheet(title, `<p>${msg}</p><div class="foot"><button class="btn" data-act="close">取消</button><button class="btn ${danger ? 'danger' : 'pri'}" id="okBtn">${okLabel}</button></div>`);
+  $('#okBtn').onclick = () => { closeSheet(); fn(); };
+}
+
+function openCell(d, eid) {
+  const st = cur(), e = st.emps.find(x => x.id === eid); if (!e) return;
+  const c = getCell(st, d, eid), lk = isLocked(st, d, eid), hol = holMap()[d];
+  const A = analyze(st, periodDates(st, UI.anchor)), iss = A.cell[d + '|' + eid] || [];
+  let h = '';
+  if (iss.length) h += `<ul class="iss">${iss.map(i => `<li class="${i.lvl}"><span>${esc(i.msg)}</span></li>`).join('')}</ul>`;
+  h += '<div class="sec">上班</div><div class="opts">';
+  for (const sh of st.shifts) {
+    const rs = c === sh.id ? [] : assignReasons(st, e, d, sh).filter(r => r !== '已鎖定休假');
+    h += `<button class="opt ${c === sh.id ? 'on' : ''}" style="--sc:${sh.color}" data-act="setCell" data-d="${d}" data-e="${eid}" data-v="${sh.id}"><b>${esc(sh.name)}</b><small>${sh.start}–${sh.end}</small>${rs.length ? `<em>⚠ ${esc(rs[0])}</em>` : ''}</button>`;
+  }
+  h += '</div><div class="sec">休假</div><div class="opts">';
+  for (const k in OFF) h += `<button class="opt ${c === k ? 'on' : ''}" data-act="setCell" data-d="${d}" data-e="${eid}" data-v="${k}"><b>${OFF[k].lb}</b><small>${OFF[k].name}</small></button>`;
+  h += `<button class="opt ${!c ? 'on' : ''}" data-act="setCell" data-d="${d}" data-e="${eid}" data-v=""><b>－</b><small>清除</small></button></div>`;
+  h += `<div style="margin-top:12px"><label class="chk"><input type="checkbox" data-f="lock" data-d="${d}" data-e="${eid}" ${lk ? 'checked' : ''}>🔒 鎖定這格（員工預排的休假或指定班，自動排班不會更動）</label></div>`;
+  h += `<div class="foot"><button class="btn" data-act="swap" data-d="${d}" data-e="${eid}">⇄ 與同事換班／代班</button></div>`;
+  openSheet(`${esc(e.name)}・${md(d)}（${WD[dow(d)]}）${hol ? `<span class="tag hol">${esc(hol)}</span>` : ''}`, h);
+}
+function openSwap(d, eid) {
+  const st = cur(), e = st.emps.find(x => x.id === eid), c = getCell(st, d, eid);
+  const others = activeEmps(st).filter(x => x.id !== eid);
+  openSheet(`${esc(e.name)} ${md(d)} 換班`, `<p class="hint" style="margin-top:0">${esc(e.name)} 這天是〔${esc(codeLabel(st, c, true))}〕。選一位同事，兩人這天的班會互換；選休假中的同事就是請他代班。</p>
+    <label class="fld"><span>原因（會寫進換班紀錄，可不填）</span><input type="text" id="swNote" maxlength="40" placeholder="例如：家中有事"></label>
+    ${others.map(o => {
+      const oc = getCell(st, d, o.id), smap = shiftMap(st);
+      const rs = smap[c] ? assignReasons(st, o, d, smap[c]).filter(r => r !== '已鎖定休假') : [];
+      if (smap[oc]) rs.push(...assignReasons(st, e, d, smap[oc]).filter(r => r !== '已鎖定休假').map(r => `${e.name}：${r}`));
+      return `<button class="li" data-act="doSwap" data-d="${d}" data-a="${eid}" data-b="${o.id}"><span>${esc(o.name)}<span class="badge ${o.type}">${o.type === 'full' ? '正' : '計'}</span>${rs.length ? `<em>⚠ ${esc(rs.join('、'))}</em>` : ''}</span><span class="r">${esc(codeLabel(st, oc, true))}</span></button>`;
+    }).join('')}`);
+}
+function doSwap(d, a, b) {
+  const st = cur(), ca = getCell(st, d, a), cb = getCell(st, d, b);
+  if (ca === cb) { toast('兩個人這天的班一樣，不用換'); return; }
+  const la = isLocked(st, d, a), lb = isLocked(st, d, b);
+  setCell(st, d, a, cb); setCell(st, d, b, ca); setLock(st, d, a, lb); setLock(st, d, b, la);
+  const ea = st.emps.find(x => x.id === a), eb = st.emps.find(x => x.id === b);
+  st.swaps.unshift({ id: uid('w'), ts: Date.now(), d, a, b, aName: ea.name, bName: eb.name, aFrom: codeLabel(st, ca, true), bFrom: codeLabel(st, cb, true), note: ($('#swNote')?.value || '').trim() });
+  save(); closeSheet(); render(); toast('已換班，並記錄在「統計 › 換班紀錄」');
+}
+function openPicker(d, sid) {
+  const st = cur(), sh = st.shifts.find(s => s.id === sid);
+  const list = activeEmps(st).filter(e => getCell(st, d, e.id) !== sid).map(e => {
+    const rs = assignReasons(st, e, d, sh), c = getCell(st, d, e.id);
+    return { e, rs, c };
+  }).sort((x, y) => x.rs.length - y.rs.length);
+  openSheet(`${md(d)}（${WD[dow(d)]}）加人到${esc(sh.name)}`, list.length ? list.map(({ e, rs, c }) => `<button class="li" data-act="setCell" data-d="${d}" data-e="${e.id}" data-v="${sid}"><span>${esc(e.name)}<span class="badge ${e.type}">${e.type === 'full' ? '正' : '計'}</span>${rs.length ? `<em>⚠ ${esc(rs.join('、'))}</em>` : ''}</span><span class="r">目前：${esc(codeLabel(st, c, true))}</span></button>`).join('') : '<p class="hint">所有人都已經在這個班了。</p>');
+}
+function openAuto() {
+  const st = cur(), dates = periodDates(st, UI.anchor);
+  openSheet('自動排班', `<p style="margin-top:0">排 <b>${periodLabel(st, dates)}</b> 的班。系統會依照每個班需要的人數、計時人員可上班時段，並遵守一例一休、換班間隔 ${st.rules.restGap} 小時、不連續上班超過 6 天、每週 40 小時，盡量平均分配。</p>
+    <ul class="rules"><li>🔒 鎖定的格子（預排休假、指定班）不會被更動</li><li>特休、請假也會保留</li><li>排不滿的班會在「檢查結果」列出來，可以再手動調整</li></ul>
+    <div class="foot"><button class="btn danger" data-act="clearP">清除本期（保留鎖定）</button><span class="grow"></span><button class="btn" data-act="autoGo" data-m="fill">只補空格</button><button class="btn pri" data-act="autoGo" data-m="all">全部重排</button></div>`);
+}
+function openExport() {
+  openSheet('匯出班表', `<button class="li" data-act="expPng"><span><b>圖片（PNG）</b><em style="color:var(--muted)">適合傳到 LINE 群組或貼公告</em></span></button>
+    <button class="li" data-act="expCsv"><span><b>Excel 檔（CSV）</b><em style="color:var(--muted)">可用 Excel 開啟再編修、列印</em></span></button>
+    <button class="li" data-act="print"><span><b>列印</b><em style="color:var(--muted)">A4 橫向，也可以另存成 PDF</em></span></button>`);
+}
+
+// ---------- 匯出 ----------
+function fileName(st, dates, ext) { return `${st.name}_班表_${dates[0]}_${dates[dates.length-1]}.${ext}`.replace(/[\\/:*?"<>|]/g, '_'); }
+async function deliver(blob, name) {
+  try {
+    const f = new File([blob], name, { type: blob.type });
+    if (matchMedia('(pointer:coarse)').matches && navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], title: name }); return; }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+function exportCsv() {
+  const st = cur(), dates = periodDates(st, UI.anchor), A = analyze(st, dates), smap = shiftMap(st), hol = holMap();
+  const q = v => { v = String(v ?? ''); return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; };
+  const rows = [[`${st.name} 班表 ${periodLabel(st, dates)}`], ['員工', '類型', ...dates.map(d => `${md(d)}(${WD[dow(d)]})${hol[d] ? ' ' + hol[d] : ''}`), '總工時', '加班']];
+  for (const e of activeEmps(st)) rows.push([e.name, e.type === 'full' ? '正職' : '計時', ...dates.map(d => { const c = getCell(st, d, e.id); return smap[c] ? smap[c].name : codeLabel(st, c); }), fmtH(A.emp[e.id].hours), fmtH(A.emp[e.id].ot)]);
+  rows.push([]);
+  for (const sh of st.shifts) rows.push([`${sh.name} 人數`, '', ...dates.map(d => `${A.cov[d][sh.id].have}/${A.cov[d][sh.id].need}`)]);
+  rows.push([]);
+  rows.push(['班別說明', ...st.shifts.map(s => `${s.name} ${s.start}-${s.end}`)]);
+  rows.push(['休假代號', '例=例假', '休=休息日', '特=特休', '假=請假', '國=國定假日']);
+  const csv = '﻿' + rows.map(r => r.map(q).join(',')).join('\r\n');
+  deliver(new Blob([csv], { type: 'text/csv;charset=utf-8' }), fileName(st, dates, 'csv'));
+}
+function exportPng() {
+  const st = cur(), dates = periodDates(st, UI.anchor), A = analyze(st, dates), smap = shiftMap(st), hol = holMap(), emps = activeEmps(st);
+  const nameW = 96, cw = dates.length > 14 ? 40 : 58, rh = 32, titleH = 46, headH = 42, sumW = 56, pad0 = 16;
+  const W = pad0 * 2 + nameW + cw * dates.length + sumW;
+  const H = pad0 + titleH + headH + rh * (emps.length + st.shifts.length) + 56;
+  const cv = document.createElement('canvas'), k = 2;
+  cv.width = W * k; cv.height = H * k;
+  const x = cv.getContext('2d'); x.scale(k, k);
+  const F = (w, s) => `${w} ${s}px "Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif`;
+  x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
+  x.fillStyle = '#0f766e'; x.font = F(700, 19); x.textBaseline = 'middle';
+  x.fillText(`${st.name}　班表　${periodLabel(st, dates)}`, pad0, pad0 + 16);
+  let y = pad0 + titleH; const x0 = pad0;
+  x.textAlign = 'center';
+  dates.forEach((d, i) => {
+    const cx = x0 + nameW + i * cw;
+    if (hol[d]) { x.fillStyle = '#fff0e6'; x.fillRect(cx, y, cw, headH + rh * emps.length); }
+    x.fillStyle = hol[d] ? '#c2410c' : (dow(d) % 6 === 0 ? '#0f766e' : '#1d2730');
+    x.font = F(700, 13); x.fillText(md(d), cx + cw / 2, y + 14);
+    x.font = F(400, 11); x.fillText(WD[dow(d)] + (hol[d] ? '・' + hol[d].slice(0, 2) : ''), cx + cw / 2, y + 31);
+  });
+  x.fillStyle = '#1d2730'; x.font = F(700, 13);
+  x.fillText('時數', x0 + nameW + cw * dates.length + sumW / 2, y + headH / 2);
+  y += headH;
+  emps.forEach((e, r) => {
+    const ry = y + r * rh;
+    x.textAlign = 'left'; x.fillStyle = '#1d2730'; x.font = F(500, 14);
+    x.fillText(e.name.length > 6 ? e.name.slice(0, 6) : e.name, x0 + 4, ry + rh / 2);
+    x.textAlign = 'center';
+    dates.forEach((d, i) => {
+      const cx = x0 + nameW + i * cw, c = getCell(st, d, e.id), sh = smap[c];
+      if (sh) {
+        x.fillStyle = sh.color + '38'; x.fillRect(cx + 2, ry + 3, cw - 4, rh - 6);
+        x.fillStyle = sh.color; x.fillRect(cx + 2, ry + 3, 3, rh - 6);
+        x.fillStyle = '#1d2730'; x.font = F(700, 14); x.fillText(sh.short, cx + cw / 2 + 1, ry + rh / 2);
+      } else if (c) {
+        x.fillStyle = c === 'R' ? '#0f766e' : c === 'H' ? '#c2410c' : (c === 'A' || c === 'L') ? '#1d5fd1' : '#8a96a3';
+        x.font = F(600, 13); x.fillText(codeLabel(st, c), cx + cw / 2, ry + rh / 2);
+      }
+    });
+    x.fillStyle = '#66727f'; x.font = F(400, 13); x.fillText(fmtH(A.emp[e.id].hours), x0 + nameW + cw * dates.length + sumW / 2, ry + rh / 2);
+  });
+  let fy = y + emps.length * rh;
+  st.shifts.forEach((sh, r) => {
+    const ry = fy + r * rh;
+    x.textAlign = 'left'; x.fillStyle = '#66727f'; x.font = F(500, 12); x.fillText(`${sh.name} 人數`, x0 + 4, ry + rh / 2);
+    x.textAlign = 'center';
+    dates.forEach((d, i) => { const c = A.cov[d][sh.id]; x.fillStyle = c.have < c.need ? '#c81e1e' : '#66727f'; x.font = F(c.have < c.need ? 700 : 400, 12); x.fillText(`${c.have}/${c.need}`, x0 + nameW + i * cw + cw / 2, ry + rh / 2); });
+  });
+  // 格線
+  x.strokeStyle = '#dbe1e7'; x.lineWidth = 1;
+  const gy0 = pad0 + titleH, gy1 = fy + st.shifts.length * rh;
+  for (let r = 0; r <= emps.length + st.shifts.length; r++) { const ly = y + r * rh + .5; x.beginPath(); x.moveTo(x0, ly); x.lineTo(W - pad0, ly); x.stroke(); }
+  x.beginPath(); x.moveTo(x0, gy0 + .5); x.lineTo(W - pad0, gy0 + .5); x.stroke();
+  for (let i = 0; i <= dates.length + 1; i++) { const lx = x0 + nameW + i * cw + .5; x.beginPath(); x.moveTo(lx, gy0); x.lineTo(lx, gy1); x.stroke(); }
+  x.strokeStyle = '#9aa5b1'; x.beginPath(); x.moveTo(x0, fy + .5); x.lineTo(W - pad0, fy + .5); x.stroke();
+  x.textAlign = 'left'; x.fillStyle = '#66727f'; x.font = F(400, 12);
+  x.fillText(st.shifts.map(s => `${s.short}＝${s.name} ${s.start}-${s.end}`).join('　') + '　例＝例假　休＝休息日　特＝特休　假＝請假　國＝國定假日', x0, gy1 + 20);
+  x.fillText(`製表：${new Date().toLocaleString('zh-TW', { hour12: false })}`, x0, gy1 + 40);
+  cv.toBlob(b => deliver(b, fileName(st, dates, 'png')), 'image/png');
+}
+function printSched() {
+  const prev = UI.view; UI.view = 'grid'; UI.tab = 'sched'; render();
+  setTimeout(() => { window.print(); UI.view = prev; render(); }, 60);
+}
+function exportJson(all) {
+  const st = cur();
+  const data = all ? S : { v: 1, cur: st.id, stations: [st], holidays: S.holidays };
+  const name = (all ? `加油站排班_全部備份_${todayStr()}.json` : `${st.name}_備份_${todayStr()}.json`).replace(/[\\/:*?"<>|]/g, '_');
+  deliver(new Blob([JSON.stringify({ app: 'gas-roster', exported: new Date().toISOString(), data }, null, 1)], { type: 'application/json' }), name);
+}
+function importJson(file) {
+  const r = new FileReader();
+  r.onload = () => {
+    let d;
+    try { d = JSON.parse(r.result); d = d.data || d; if (!Array.isArray(d.stations)) throw 0; } catch (e) { toast('這不是排班系統的備份檔'); return; }
+    d.stations.forEach(fixStation);
+    const names = d.stations.map(s => s.name).join('、');
+    openSheet('匯入備份', `<p style="margin-top:0">檔案裡有 ${d.stations.length} 個站：${esc(names)}</p>
+      <button class="li" id="imMerge"><span><b>合併</b><em style="color:var(--muted)">加入這些站；同一個站（同一份來源）會用檔案的版本更新，其他站不動</em></span></button>
+      <button class="li" id="imReplace"><span><b>全部取代</b><em style="color:var(--err)">刪掉這台裝置上目前所有資料，換成檔案的內容</em></span></button>`);
+    $('#imMerge').onclick = () => {
+      for (const s of d.stations) { const i = S.stations.findIndex(x => x.id === s.id); if (i >= 0) S.stations[i] = s; else S.stations.push(s); }
+      if (Array.isArray(d.holidays)) { const have = new Set(S.holidays.map(h => h.date)); d.holidays.forEach(h => { if (!have.has(h.date)) S.holidays.push(h); }); S.holidays.sort((a, b) => a.date.localeCompare(b.date)); }
+      S.cur = d.stations[0].id; save(); closeSheet(); render(); toast('已合併匯入');
+    };
+    $('#imReplace').onclick = () => {
+      S = { v: 1, cur: d.stations[0].id, stations: d.stations, holidays: Array.isArray(d.holidays) ? d.holidays : DEFAULT_HOLIDAYS.slice() };
+      save(); closeSheet(); render(); toast('已匯入');
+    };
+  };
+  r.readAsText(file);
+}
+
+// ---------- 範例資料 ----------
+function loadSample() {
+  const a = newStation('範例：中山站（24小時）', '24h');
+  const E = (name, type, hire, gender, nightOK, extra) => mkEmp(Object.assign({ name, type, hire, gender, nightOK }, extra || {}));
+  a.emps = [
+    E('王志明', 'full', '2014-03-01', 'M', true), E('林美玲', 'full', '2019-08-15', 'F', false), E('陳建宏', 'full', '2021-06-01', 'M', true),
+    E('張雅婷', 'full', '2023-02-10', 'F', false), E('李國華', 'full', '2025-09-01', 'M', true), E('黃淑芬', 'full', '2026-05-18', 'F', false),
+    E('吳宗翰', 'part', '2025-10-01', 'M', false, { avail: { days: [true,true,true,true,true,true,true], from: '15:00', to: '23:00' }, minWeek: 16, maxWeek: 32, note: '大學生，只上中班' }),
+    E('許佩君', 'part', '2024-04-01', 'F', false, { avail: { days: [false,true,true,true,true,true,false], from: '07:00', to: '15:00' }, maxWeek: 24, note: '平日早上' }),
+    E('鄭凱文', 'part', '2026-01-12', 'M', true, { avail: { days: [true,false,false,false,false,true,true], from: '00:00', to: '00:00' }, maxWeek: 24 }),
+  ];
+  a.shifts[0].need = [3,2,2,2,2,2,3];
+  const b = newStation('範例：民生站（07:00–22:00）', 'custom');
+  b.hours.days[0] = { open: '08:00', close: '20:00', closed: false };
+  b.shifts[0].need = [1,2,2,2,2,2,2]; b.shifts[1].need = [1,2,2,2,2,2,2];
+  b.emps = [
+    E('周大同', 'full', '2016-07-01', 'M', true), E('蔡宜芳', 'full', '2020-11-20', 'F', false), E('洪俊傑', 'full', '2022-09-05', 'M', true),
+    E('楊雅琪', 'full', '2024-12-01', 'F', false),
+    E('謝承恩', 'part', '2025-06-01', 'M', true, { avail: { days: [true,false,false,false,false,true,true], from: '00:00', to: '00:00' }, maxWeek: 24 }),
+    E('郭欣怡', 'part', '2026-03-01', 'F', false, { avail: { days: [false,true,true,true,true,true,false], from: '14:00', to: '22:00' }, maxWeek: 24 }),
+  ];
+  // 預排休假示範
+  const base = weekStartOf(todayStr(), 1);
+  setCell(a, addD(base, 9), a.emps[1].id, 'A'); setLock(a, addD(base, 9), a.emps[1].id, true);
+  setCell(a, addD(base, 11), a.emps[3].id, 'L'); setLock(a, addD(base, 11), a.emps[3].id, true);
+  S.stations.push(a, b); S.cur = a.id;
+  for (const st of [a, b]) autoSchedule(st, periodDates(st, todayStr()), 'all');
+  undoSnap = null;
+  save(); UI.tab = 'sched'; UI.anchor = todayStr(); render(); toast('已載入 2 個範例站，並自動排好本週的班');
+}
+
+// ---------- 事件 ----------
+document.addEventListener('click', ev => {
+  const tb = ev.target.closest('[data-tab]');
+  if (tb) { UI.tab = tb.dataset.tab; saveUI(); closeSheet(); render(); window.scrollTo(0, 0); return; }
+  if (ev.target === $('#ov')) { closeSheet(); return; }
+  const el = ev.target.closest('[data-act]'); if (!el) return;
+  const a = el.dataset.act, st = cur(), D = el.dataset;
+  const dates = () => periodDates(st, UI.anchor);
+  switch (a) {
+    case 'close': closeSheet(); break;
+    case 'prev': UI.anchor = addD(dates()[0], -1); render(); break;
+    case 'next': UI.anchor = addD(dates().slice(-1)[0], 1); render(); break;
+    case 'today': UI.anchor = todayStr(); render(); break;
+    case 'period': st.period = D.v; save(); render(); break;
+    case 'view': UI.view = D.v; saveUI(); render(); break;
+    case 'issues': UI.issuesOpen = true; render(); $('#issBox')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); break;
+    case 'cell': openCell(D.d, D.e); break;
+    case 'addTo': openPicker(D.d, D.s); break;
+    case 'setCell': {
+      const was = getCell(st, D.d, D.e);
+      setCell(st, D.d, D.e, D.v);
+      if (D.v === 'A' || D.v === 'L') setLock(st, D.d, D.e, true);
+      else if ((was === 'A' || was === 'L') && !D.v) setLock(st, D.d, D.e, false);
+      save(); closeSheet(); render(); break;
+    }
+    case 'swap': openSwap(D.d, D.e); break;
+    case 'doSwap': doSwap(D.d, D.a, D.b); break;
+    case 'auto': openAuto(); break;
+    case 'autoGo': {
+      const r = autoSchedule(st, dates(), D.m); closeSheet(); render();
+      toast(r.short ? `排了 ${r.placed} 個班，還有 ${r.short} 人次排不進去（看檢查結果）` : `排了 ${r.placed} 個班，人力都排滿了`, '復原', undo);
+      break;
+    }
+    case 'clearP': closeSheet(); confirmSheet('清除本期', '確定要清除本期所有沒鎖定的格子嗎？', '清除', () => { clearPeriod(st, dates()); render(); toast('已清除', '復原', undo); }, true); break;
+    case 'export': openExport(); break;
+    case 'expPng': closeSheet(); exportPng(); break;
+    case 'expCsv': closeSheet(); exportCsv(); break;
+    case 'print': closeSheet(); printSched(); break;
+    case 'addEmp': openEmp(); break;
+    case 'editEmp': openEmp(D.id); break;
+    case 'saveEmp': saveEmp(D.id); break;
+    case 'delEmp': {
+      const e = st.emps.find(x => x.id === D.id);
+      confirmSheet('刪除員工', `確定刪除「${esc(e.name)}」？他的排班紀錄也會一起刪掉。<br><small>如果只是離職，建議改成取消「在職」，可以保留過去的班表。</small>`, '刪除', () => {
+        st.emps = st.emps.filter(x => x.id !== D.id);
+        for (const d in st.sched) setCell(st, d, D.id, '');
+        for (const d in st.locks) setLock(st, d, D.id, false);
+        save(); render(); toast('已刪除');
+      }, true);
+      break;
+    }
+    case 'empMove': {
+      const i = st.emps.findIndex(x => x.id === D.id), j = i + +D.k;
+      if (j < 0 || j >= st.emps.length) break;
+      [st.emps[i], st.emps[j]] = [st.emps[j], st.emps[i]]; save(); render(); break;
+    }
+    case 'delSwap': st.swaps = st.swaps.filter(w => w.id !== D.id); save(); render(); break;
+    case 'newStation': case 'copyStation': newStationSheet(a === 'copyStation'); break;
+    case 'delStation':
+      if (S.stations.length === 1) { toast('至少要保留一個站'); break; }
+      confirmSheet('刪除加油站', `確定刪除「${esc(st.name)}」？這個站的員工和所有班表都會刪掉，無法復原。<br><small>建議先到下方「匯出本站備份」。</small>`, '刪除', () => {
+        S.stations = S.stations.filter(s => s.id !== st.id); S.cur = S.stations[0].id; save(); render(); toast('已刪除');
+      }, true);
+      break;
+    case 'hMode': st.hours.mode = D.v; save(); render(); break;
+    case 'hoursAll': { const m = st.hours.days[1]; st.hours.days = st.hours.days.map(() => ({ ...m })); save(); render(); break; }
+    case 'addClosed': { const d = $('#cdDate').value; if (!d) { toast('請選日期'); break; } if (!st.closedDays.some(c => c.date === d)) st.closedDays.push({ date: d, note: $('#cdNote').value.trim() }); st.closedDays.sort((p, q) => p.date.localeCompare(q.date)); save(); render(); break; }
+    case 'delClosed': st.closedDays.splice(+D.i, 1); save(); render(); break;
+    case 'addShift': st.shifts.push(mkShift('新班別', '新', '09:00', '17:00', PALETTE[st.shifts.length % PALETTE.length], 1)); save(); render(); break;
+    case 'delShift': {
+      const sh = st.shifts[+D.i];
+      confirmSheet('刪除班別', `確定刪除「${esc(sh.name)}」？班表上排到這個班的格子會一起清掉。`, '刪除', () => {
+        st.shifts.splice(+D.i, 1);
+        for (const d in st.sched) for (const e in st.sched[d]) if (st.sched[d][e] === sh.id) setCell(st, d, e, '');
+        save(); render();
+      }, true);
+      break;
+    }
+    case 'shColor': st.shifts[+D.i].color = D.c; save(); render(); break;
+    case 'addHol': { const d = $('#hDate').value, n = $('#hName').value.trim(); if (!d || !n) { toast('請填日期和名稱'); break; } S.holidays = S.holidays.filter(h => h.date !== d); S.holidays.push({ date: d, name: n }); S.holidays.sort((p, q) => p.date.localeCompare(q.date)); save(); render(); break; }
+    case 'delHol': S.holidays.splice(+D.i, 1); save(); render(); break;
+    case 'resetHol': S.holidays = DEFAULT_HOLIDAYS.slice(); save(); render(); toast('已恢復預設國定假日'); break;
+    case 'exportAll': exportJson(true); break;
+    case 'exportStation': exportJson(false); break;
+    case 'import': $('#fileIn').click(); break;
+    case 'sample': loadSample(); break;
+    case 'resetAll': confirmSheet('清除全部資料', '確定要刪除這台裝置上所有加油站、員工和班表？<b>無法復原</b>，建議先匯出全部備份。', '全部清除', () => { S = initState(); save(); render(); toast('已清除'); }, true); break;
+    case 'install': if (deferredInstall) { deferredInstall.prompt(); deferredInstall = null; } break;
+  }
+});
+document.addEventListener('change', ev => {
+  const el = ev.target, f = el.dataset && el.dataset.f; if (!f) return;
+  const st = cur(), i = +el.dataset.i, w = +el.dataset.w, v = el.value;
+  switch (f) {
+    case 'lock': setLock(st, el.dataset.d, el.dataset.e, el.checked); save(); render(); return;
+    case 'stName': st.name = v.trim() || '未命名'; save(); render(); return;
+    case 'hOpen': st.hours.days[w].open = v; break;
+    case 'hClose': st.hours.days[w].close = v; break;
+    case 'hClosed': st.hours.days[w].closed = el.checked; save(); render(); return;
+    case 'shName': st.shifts[i].name = v.trim() || '班別'; break;
+    case 'shShort': st.shifts[i].short = v.trim() || '?'; break;
+    case 'shStart': if (v) st.shifts[i].start = v; break;
+    case 'shEnd': if (v) st.shifts[i].end = v; break;
+    case 'shBreak': st.shifts[i].breakMin = Math.max(0, +v || 0); break;
+    case 'shNeed': st.shifts[i].need[w] = Math.max(0, Math.floor(+v || 0)); break;
+    case 'period': st.period = v; break;
+    case 'weekStart': st.weekStart = +v; break;
+    case 'restGap': st.rules.restGap = +v; break;
+    case 'otMax': st.rules.otMax = +v; break;
+  }
+  save();
+  const cc = $('#covCheck'); if (cc) cc.innerHTML = coverageCheck(st);
+});
+$('#stSel').addEventListener('change', ev => {
+  if (ev.target.value === '__new') { ev.target.value = S.cur; newStationSheet(false); return; }
+  S.cur = ev.target.value; save(); render();
+});
+$('#fileIn').addEventListener('change', ev => { const f = ev.target.files[0]; if (f) importJson(f); ev.target.value = ''; });
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape') closeSheet(); });
+document.addEventListener('toggle', ev => { if (ev.target.id === 'issBox') UI.issuesOpen = ev.target.open; }, true);
+
+function newStationSheet(copy) {
+  const st = cur();
+  openSheet(copy ? '複製本站設定成新站' : '新增加油站', `
+    <label class="fld"><span>站名</span><input type="text" id="nsName" maxlength="30" placeholder="例如：中山站"></label>
+    ${copy ? `<p class="hint">會複製「${esc(st.name)}」的營業時間、班別、人力需求和法規設定，員工和班表不會複製。</p>` : `<div class="fld"><span>營業型態</span><div class="seg" id="nsMode"><button type="button" class="on" data-v="24h">24 小時</button><button type="button" data-v="custom">07:00–22:00</button></div></div><p class="hint">建立後可以在「設定」調整營業時間和班別。</p>`}
+    <div class="foot"><button class="btn" data-act="close">取消</button><button class="btn pri" id="nsOk">建立</button></div>`);
+  const m = $('#nsMode');
+  if (m) m.onclick = ev => { const b = ev.target.closest('button'); if (b) m.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); };
+  setTimeout(() => $('#nsName').focus(), 50);
+  $('#nsOk').onclick = () => {
+    const name = $('#nsName').value.trim(); if (!name) { toast('請輸入站名'); return; }
+    let ns;
+    if (copy) {
+      ns = newStation(name);
+      ns.hours = JSON.parse(JSON.stringify(st.hours));
+      ns.shifts = st.shifts.map(s => ({ ...s, id: uid('s'), need: s.need.slice() }));
+      ns.period = st.period; ns.weekStart = st.weekStart; ns.rules = { ...st.rules };
+    } else ns = newStation(name, m.querySelector('.on').dataset.v);
+    S.stations.push(ns); S.cur = ns.id; save(); closeSheet(); UI.tab = 'set'; render(); toast(`已建立 ${name}`);
+  };
+}
+
+// ---------- PWA ----------
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; const b = $('#installBtn'); if (b) b.hidden = false; });
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+// ---------- 啟動 ----------
+S = load() || initState();
+save();
+render();
+window.__roster = { get S() { return S; }, analyze, autoSchedule, periodDates, assignReasons, annualLeave, render, UI };
+</script>
+</body>
+</html>
